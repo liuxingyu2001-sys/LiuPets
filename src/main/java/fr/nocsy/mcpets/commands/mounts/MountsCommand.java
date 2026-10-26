@@ -84,7 +84,11 @@ public class MountsCommand implements CCommand {
             return;
         }
 
-        // Default: open categories menu
-        CategoriesMenu.openFiltered(p, CategoryType.MOUNT);
+        // Default: open categories menu when configured, otherwise the flat mount list
+        if (fr.nocsy.mcpets.data.Category.getCategories(CategoryType.MOUNT).isEmpty()) {
+            new fr.nocsy.mcpets.data.inventories.MountMenu(p, 0).open(p);
+        } else {
+            CategoriesMenu.openFiltered(p, CategoryType.MOUNT);
+        }
     }
 }

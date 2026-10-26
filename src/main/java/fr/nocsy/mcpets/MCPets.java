@@ -26,8 +26,15 @@ import io.lumine.mythic.core.skills.CustomComponentRegistry;
 
 import fr.nocsy.mcpets.data.Pet;
 import fr.nocsy.mcpets.data.PetSkin;
+import fr.nocsy.mcpets.data.Category;
+import fr.nocsy.mcpets.data.PlayerSignal;
 import fr.nocsy.mcpets.data.sql.Databases;
 import fr.nocsy.mcpets.data.sql.PlayerData;
+import fr.nocsy.mcpets.data.inventories.PetInventory;
+import fr.nocsy.mcpets.data.livingpets.PetFoodBuff;
+import fr.nocsy.mcpets.data.editor.EditorEditing;
+import fr.nocsy.mcpets.data.editor.EditorPageSelection;
+import fr.nocsy.mcpets.utils.debug.Debugger;
 import fr.nocsy.mcpets.data.config.PetConfig;
 import fr.nocsy.mcpets.commands.CommandHandler;
 import fr.nocsy.mcpets.data.editor.EditorItems;
@@ -72,9 +79,10 @@ public class MCPets extends JavaPlugin {
     private static PlaceholderAPICompat placeholderAPI;
 
     @Getter
-    private static final String prefix = "§8[§»";
+    private static final String prefix = "§8[§bLiuPets§8] §r";
 
     public static void loadConfigs() {
+        fr.nocsy.mcpets.compat.LiuIntegrations.reload();
         ItemsListConfig.getInstance().init();
         PetFoodConfig.getInstance().init();
         GlobalConfig.getInstance().init();
@@ -115,6 +123,7 @@ public class MCPets extends JavaPlugin {
     @Override
     public void onLoad() {
         instance = this;
+        AbstractConfig.migrateLegacyData();
 
         // Reset static flags for PlugMan reload support
         itemsAdderFound = false;
@@ -153,6 +162,11 @@ public class MCPets extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (modeler == null || !checkMythicMobs()) {
+            getLog().severe("LiuPets 启动失败：请安装兼容的 MythicMobs 与 ModelEngine/BetterModel。");
+            Bukkit.getPluginManager().disablePlugin(this);
+            return;
+        }
         CommandHandler.init(this);
         EventListener.init(this);
         modeler.registerListeners(this);
@@ -179,7 +193,9 @@ public class MCPets extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLog().info("-=-=-=-= MCPets disabled =-=-=-=-");
+        if (placeholderAPI != null) placeholderAPI.unregister();
+        PetInteractionMenuCleanup();
+        getLog().info("LiuPets 已关闭，正在保存宠物数据。");
         getLog().info("          See you soon           ");
         getLog().info("-=-=-=-= -=-=-=-=-=-=-=- =-=-=-=-");
 
@@ -191,9 +207,20 @@ public class MCPets extends JavaPlugin {
             modeler.unregisterListeners();
         }
 
+        // Capture items of pet inventories that are still open when the server stops
+        PetInventory.saveAllOpen();
+
         // Run all DB saves on a separate thread to avoid freezing the main thread
         final CompletableFuture<Void> saveFuture = CompletableFuture.runAsync(() -> {
+            // Plugin disabled before configs were ever loaded (missing dependency):
+            // there is nothing to persist and GlobalConfig may be null.
+            if (GlobalConfig.instance == null) return;
             PetStats.saveAll();
+            // PlayerData.saveAll (YAML) / saveData (MySQL) covers online players who
+            // did not quit: last active pet, pet inventories and cached stats.
+            if (!GlobalConfig.getInstance().isDatabaseSupport()) {
+                PlayerData.saveDB();
+            }
 
             // Save all active pets to DB before clearing them so that a server restart
             // does not wipe the mcpets_active_pet records — players rejoin with their pet intact.
@@ -235,6 +262,19 @@ public class MCPets extends JavaPlugin {
         }
 
         Pet.clearPets();
+
+        // Drop every static cache so a PlugMan reload starts from a clean slate
+        PetStats.clearAll();
+        fr.nocsy.mcpets.utils.PetTimer.clearAll();
+        PetFoodBuff.clearAll();
+        PlayerSignal.clearAll();
+        Category.clearAll();
+        EditorEditing.clearAll();
+        fr.nocsy.mcpets.data.editor.Editor.clearAll();
+        EditorPageSelection.clearAll();
+        Debugger.clearAll();
+        PlayerData.clearCache();
+        PetInventory.clearCache();
         Databases.closeConnection();
     }
 
@@ -384,6 +424,10 @@ public class MCPets extends JavaPlugin {
      */
     public static boolean isItemsAdderLoaded() {
         return itemsAdderFound;
+    }
+
+    private static void PetInteractionMenuCleanup() {
+        fr.nocsy.mcpets.listeners.PetInteractionMenuListener.getWaitingForAnswer().clear();
     }
 
     public static Logger getLog() {

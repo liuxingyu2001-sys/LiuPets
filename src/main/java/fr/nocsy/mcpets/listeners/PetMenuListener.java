@@ -29,6 +29,7 @@ public class PetMenuListener implements Listener {
 
         e.setCancelled(true);
 
+        if (e.getRawSlot() < 0 || e.getRawSlot() >= e.getInventory().getSize()) return;
         final ItemStack it = e.getCurrentItem();
         if (it == null || it.getType().isAir()) {
             return;
@@ -36,12 +37,21 @@ public class PetMenuListener implements Listener {
 
         if (MenuPaginationHelper.handlePagination(it, p,
                 "AlmPetPreviousPage;", "AlmPetNextPage;",
-            (player, page) -> new PetMenu(player, page).open(player))) {
+            // Keep the flat pet list: PetMenu#open would bounce back to the categories
+            // menu when categories exist, making pages beyond the first unreachable.
+            (player, page) -> player.openInventory(new PetMenu(player, page).getInventory()))) {
             return;
         }
 
         final Pet petObject = Pet.getFromIcon(it);
         if (petObject != null) {
+            final Pet active = Pet.getActivePetsForOwner(p.getUniqueId()).stream()
+                    .filter(pet -> pet.getId().equals(petObject.getId())).findFirst().orElse(null);
+            if (active != null) {
+                active.setLastInteractedWith(p);
+                new fr.nocsy.mcpets.data.inventories.PetInteractionMenu(active, p.getUniqueId()).open(p);
+                return;
+            }
             p.closeInventory();
             final Pet pet = petObject.copy();
             pet.spawnWithMessage(p);

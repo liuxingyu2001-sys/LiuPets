@@ -21,12 +21,19 @@ public class ArgumentMount extends AArgument {
     @Override
     public void commandEffect() {
         Player p = (Player) sender;
-        Pet pet = Pet.fromOwner(p.getUniqueId());
-        if (pet == null) {
+        java.util.List<Pet> mounts = Pet.getActivePetsForOwner(p.getUniqueId()).stream()
+                .filter(Pet::isMountable)
+                .toList();
+        if (mounts.isEmpty()) {
             Language.NO_ACTIVE_PET.sendMessage(p);
             return;
         }
+        if (mounts.size() > 1) {
+            Language.SPECIFY_PET.sendMessageFormatted(p, new fr.nocsy.mcpets.data.config.FormatArg("%pets%",
+                    mounts.stream().map(Pet::getId).collect(java.util.stream.Collectors.joining(", "))));
+            return;
+        }
 
-        PetInteractionMenuListener.mount(p, pet);
+        PetInteractionMenuListener.mount(p, mounts.getFirst());
     }
 }

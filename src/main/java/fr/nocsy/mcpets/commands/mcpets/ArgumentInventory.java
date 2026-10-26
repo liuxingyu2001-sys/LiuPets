@@ -1,14 +1,19 @@
 package fr.nocsy.mcpets.commands.mcpets;
 
+import fr.nocsy.mcpets.MCPets;
 import fr.nocsy.mcpets.PPermission;
 import fr.nocsy.mcpets.commands.AArgument;
 import fr.nocsy.mcpets.data.Pet;
+import fr.nocsy.mcpets.data.config.GlobalConfig;
 import fr.nocsy.mcpets.data.config.Language;
 import fr.nocsy.mcpets.data.inventories.PetInventory;
+import fr.nocsy.mcpets.data.sql.Databases;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.UUID;
 
 public class ArgumentInventory extends AArgument {
 
@@ -39,13 +44,28 @@ public class ArgumentInventory extends AArgument {
             return;
         }
 
-        PetInventory inventory = PetInventory.get(playerToOpen.getUniqueId(), petId);
+        final UUID owner = playerToOpen.getUniqueId();
+        if (GlobalConfig.getInstance().isDatabaseSupport() && !(playerToOpen instanceof Player && playerToOpen.isOnline())) {
+            // Offline target: load its row off-thread, then open on the main thread.
+            Bukkit.getScheduler().runTaskAsynchronously(MCPets.getInstance(), () -> {
+                Databases.loadData(owner);
+                Bukkit.getScheduler().runTask(MCPets.getInstance(), () -> open(sender, owner, petId));
+            });
+            return;
+        }
+
+        open(sender, owner, petId);
+    }
+
+    private void open(final CommandSender sender, final UUID owner, final String petId) {
+        PetInventory inventory = PetInventory.get(owner, petId);
 
         if (inventory == null) {
             Language.PET_INVENTORY_COULDNOT_OPEN.sendMessage(sender);
             return;
         }
 
-        inventory.open((Player)sender);
+        if (sender instanceof Player player)
+            inventory.open(player);
     }
 }

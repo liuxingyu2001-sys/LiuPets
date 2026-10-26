@@ -10,6 +10,8 @@ import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import fr.nocsy.mcpets.MCPets;
 import fr.nocsy.mcpets.data.Pet;
@@ -21,6 +23,7 @@ import fr.nocsy.mcpets.utils.PetAnnouncement;
 import fr.nocsy.mcpets.data.PetDespawnReason;
 import fr.nocsy.mcpets.events.PetLevelUpEvent;
 import fr.nocsy.mcpets.data.inventories.PetInventory;
+import fr.nocsy.mcpets.data.inventories.PetInventoryHolder;
 
 import io.lumine.mythic.core.skills.SkillTriggers;
 import io.lumine.mythic.core.skills.SkillMetadataImpl;
@@ -242,7 +245,27 @@ public class PetLevel {
                 MCPets.getLog().severe("Could not load inventory of pet " + evolutionId + " for player " + player + "\nCritical issue : could not evolve the pet.");
                 return false;
             }
-            evolutionInventory.setInventory(petInventory.getInventory());
+            // Move the contents instead of sharing the same Inventory instance:
+            // sharing would let the old pet and its evolution diverge / duplicate items.
+            final Inventory source = petInventory.getInventory();
+            final Inventory target = evolutionInventory.getInventory();
+            final ItemStack[] contents = source.getContents();
+            for (int i = 0; i < contents.length; i++) {
+                final ItemStack item = contents[i];
+                if (item == null) continue;
+                if (i < target.getSize()) {
+                    target.setItem(i, item.clone());
+                } else {
+                    final Player online = Bukkit.getPlayer(player);
+                    if (online != null)
+                        online.getWorld().dropItemNaturally(online.getLocation(), item.clone());
+                }
+            }
+            evolutionInventory.setInventory(target);
+
+            // Clear the previous pet inventory and persist the empty state.
+            petInventory.setInventory(
+                    new PetInventoryHolder(source.getSize(), PetInventoryHolder.Type.PET_INVENTORY_MENU).getInventory());
         }
 
         // Clear the stats of the previous level since we are evolving to the next one

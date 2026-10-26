@@ -71,6 +71,8 @@ public class PermsUtils {
      * Check if the player has the permission
      */
     protected static boolean hasPermission(@NotNull UUID uuid, String permission) {
+        if (permission == null || permission.isBlank())
+            return false;
         if (MCPets.getLuckPerms() != null) {
             User user = MCPets.getLuckPerms().getUserManager().getUser(uuid);
             if (user != null) {

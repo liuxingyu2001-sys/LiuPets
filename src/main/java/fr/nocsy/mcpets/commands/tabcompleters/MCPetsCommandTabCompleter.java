@@ -29,7 +29,19 @@ public class MCPetsCommandTabCompleter implements TabCompleter {
 
         ArrayList<String> completed = new ArrayList<>();
 
-        if (cmd.getName().equalsIgnoreCase("mcpets")) {
+        if (args.length == 0) return List.of();
+        if (cmd.getName().equalsIgnoreCase("liupets")) {
+            if (commandSender.hasPermission(PPermission.ADMIN.getPermission()) && args.length > 1 && args[0].equalsIgnoreCase("unlock")) {
+                List<String> values = args.length == 2 ? Bukkit.getOnlinePlayers().stream().map(Player::getName).toList()
+                        : args.length == 3 ? Pet.getObjectPets().stream().map(Pet::getId).toList() : List.of();
+                return values.stream().filter(s -> s.toLowerCase(java.util.Locale.ROOT).startsWith(args[args.length - 1].toLowerCase(java.util.Locale.ROOT))).toList();
+            }
+            if (args.length == 1) {
+                completed.add("help");
+                completed.add("list");
+                completed.add("mounts");
+                if (commandSender.hasPermission(PPermission.ADMIN.getPermission())) completed.add("unlock");
+            }
 
             if (commandSender instanceof Player) {
 

@@ -51,6 +51,11 @@ public class Debugger {
         listeners.remove(uuid);
     }
 
+    /** Forget every debug listener (plugin disable / reload). */
+    public static void clearAll() {
+        listeners.clear();
+    }
+
     /**
      * Says whether the said uuid is listening to the debugger
      */

@@ -16,8 +16,7 @@ import fr.nocsy.mcpets.data.config.GlobalConfig;
 
 public class PetInteractionMenu {
 
-    @Getter
-    private static final String title = Language.INVENTORY_PETS_MENU_INTERACTIONS.getMessage();
+    public static String getTitle() { return Language.INVENTORY_PETS_MENU_INTERACTIONS.getMessage(); }
 
     @Getter
     private final Inventory inventory;
@@ -29,7 +28,7 @@ public class PetInteractionMenu {
             return;
         }
         pet.setOwner(owner);
-        inventory = new PetInventoryHolder(9, title, PetInventoryHolder.Type.PET_INTERACTION_MENU).getInventory();
+        inventory = new PetInventoryHolder(9, getTitle(), PetInventoryHolder.Type.PET_INTERACTION_MENU).getInventory();
 
         if (GlobalConfig.getInstance().isActivateBackMenuIcon())
             inventory.setItem(0, Items.PETMENU.getItem());

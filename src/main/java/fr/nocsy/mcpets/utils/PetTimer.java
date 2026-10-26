@@ -4,12 +4,12 @@ import fr.nocsy.mcpets.MCPets;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PetTimer {
 
     @Getter
-    private static HashMap<PetTimer, Integer> runningTimers = new HashMap<>();
+    private static final ConcurrentHashMap<PetTimer, Integer> runningTimers = new ConcurrentHashMap<>();
 
     @Getter
     private int cooldown;
@@ -59,5 +59,10 @@ public class PetTimer {
 
     public boolean isRunning() {
         return remainingTime > 0;
+    }
+
+    /** Forget every timer reference (plugin disable / reload). Tasks are cancelled by Bukkit. */
+    public static void clearAll() {
+        runningTimers.clear();
     }
 }

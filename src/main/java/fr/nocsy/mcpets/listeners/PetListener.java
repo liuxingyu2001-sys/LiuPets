@@ -23,6 +23,11 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import fr.nocsy.mcpets.MCPets;
 import fr.nocsy.mcpets.data.Pet;
 import fr.nocsy.mcpets.data.Items;
+import fr.nocsy.mcpets.data.PlayerSignal;
+import fr.nocsy.mcpets.data.Category;
+import fr.nocsy.mcpets.data.livingpets.PetStats;
+import fr.nocsy.mcpets.data.editor.EditorEditing;
+import fr.nocsy.mcpets.data.editor.EditorPageSelection;
 import fr.nocsy.mcpets.PPermission;
 import fr.nocsy.mcpets.utils.Utils;
 import fr.nocsy.mcpets.data.PetSkin;
@@ -48,7 +53,7 @@ import io.lumine.mythic.bukkit.events.MythicMobDespawnEvent;
 
 public class PetListener implements Listener {
 
-    private final Map<UUID, String> reconnectionPets = new HashMap<>();
+    private final Map<UUID, List<String>> reconnectionPets = new HashMap<>();
 
     @EventHandler
     public void interact(PlayerInteractEntityEvent e) {
@@ -152,30 +157,41 @@ public class PetListener implements Listener {
 
         List<String> activePetIds = new ArrayList<>();
         Map<String, String> activeSkinIds = new HashMap<>();
+        String lastActivePet = null;
 
         // Create a copy to avoid ConcurrentModificationException when despawning modifies the list
         List<Pet> pets = Pet.getActivePetsForOwner(uuid);
-        for (Pet pet : new ArrayList<>(pets)) {
+        for (Pet pet : pets) {
             // Capture skin data before despawn clears it
             PetSkin activeSkin = pet.getActiveSkin();
             pet.despawn(PetDespawnReason.DISCONNECTION);
-            if (p.hasPermission(pet.getPermission())) {
+            if (canUse(p, pet)) {
                 String encoded = PlayerData.encodeActivePet(pet.getId(),
                         activeSkin != null ? activeSkin.getPathId() : null);
-                reconnectionPets.putIfAbsent(uuid, encoded);
+                reconnectionPets.computeIfAbsent(uuid, k -> new ArrayList<>()).add(encoded);
                 activePetIds.add(pet.getId());
+                lastActivePet = encoded;
                 if (activeSkin != null) {
                     activeSkinIds.put(pet.getId(), activeSkin.getPathId());
                 }
-                if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
-                    PlayerData pd = PlayerData.get(uuid);
-                    if (pd != null) {
-                        pd.setLastActivePet(encoded);
-                        pd.save();
-                    }
-                }
             }
         }
+
+        // Persist last active pet once (not once per pet), including open pet inventories
+        final PlayerData pd = PlayerData.get(uuid);
+        if (pd != null) {
+            // Always persist the current state; the config flag only decides whether
+            // it is restored on join, not what is stored in the database.
+            pd.setLastActivePet(activePetIds.isEmpty() ? "" : (lastActivePet != null ? lastActivePet : ""));
+            final Map<String, PetInventory> openInventories = PetInventory.getPetInventories().get(uuid);
+            if (openInventories != null) {
+                for (PetInventory inventory : openInventories.values()) {
+                    pd.setPetInventory(inventory);
+                }
+            }
+            pd.save();
+        }
+
         // Velocity: persist or clear active pet record so destination server restores correctly
         if (GlobalConfig.getInstance().isVelocityEnabled()
                 && GlobalConfig.getInstance().isDatabaseSupport()) {
@@ -189,16 +205,17 @@ public class PetListener implements Listener {
                         () -> Databases.clearActivePet(uuid));
             }
         }
-        if (pets.isEmpty() && GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
-            PlayerData pd = PlayerData.get(uuid);
-            if (pd != null) {
-                pd.setLastActivePet("");
-                pd.save();
-            }
-        }
-        // Clean up player caches from memory to prevent memory leak
-        PlayerData.remove(p.getUniqueId());
-        PetInventory.removePlayer(p.getUniqueId());
+
+        // Clean up per-player caches to prevent memory leaks across sessions
+        PetStats.remove(uuid);
+        Category.unregisterPlayerView(p);
+        PlayerSignal.clear(uuid);
+        Debugger.leave(uuid);
+        fr.nocsy.mcpets.data.editor.Editor.clear(uuid);
+        EditorEditing.clear(uuid);
+        EditorPageSelection.clear(uuid);
+        PlayerData.remove(uuid);
+        PetInventory.removePlayer(uuid);
     }
 
 
@@ -208,75 +225,95 @@ public class PetListener implements Listener {
         UUID uuid = p.getUniqueId();
 
         Bukkit.getScheduler().runTaskLater(MCPets.getInstance(), () -> {
+            if (!p.isOnline()) return;
             if (GlobalConfig.getInstance().isDatabaseSupport()) {
-                PlayerData.reloadAll(uuid);
-            }
-
-            if (GlobalConfig.getInstance().isVelocityEnabled()
-                    && GlobalConfig.getInstance().isDatabaseSupport()) {
-
-                // When Velocity is enabled the DB is the ONLY source of truth.
-                boolean isLiveSwitch = VelocitySyncManager.isPlayerSwitching(uuid);
-                VelocitySyncManager.clearSwitchingPlayer(uuid);
-                reconnectionPets.remove(uuid); // discard — DB owns the state
-
-                // Load from DB asynchronously to avoid blocking the main thread
+                // Never run the row SELECT on the main thread: on a busy MySQL this
+                // used to freeze the server for every join.
                 Bukkit.getScheduler().runTaskAsynchronously(MCPets.getInstance(), () -> {
-                    Databases.ActivePetRecord record = Databases.loadActivePet(uuid);
-                    if (record == null) return;
-                    if (isLiveSwitch) {
-                        Databases.clearActivePet(uuid);
-                    }
-                    // Return to main thread to spawn pets (skin restoration uses static maps)
+                    PlayerData.reloadAll(uuid);
                     Bukkit.getScheduler().runTask(MCPets.getInstance(), () -> {
-                        if (!p.isOnline()) return;
-                        for (String petId : record.getPetIds()) {
-                            Pet template = Pet.getFromId(petId);
-                            if (template == null) continue;
-                            Pet velocityPet = template.copy();
-                            velocityPet.setCheckPermission(false);
-                            velocityPet.setOwner(uuid);
-                            // Restore active skin if one was saved
-                            restoreSkin(p, velocityPet, record.getSkinId(petId));
-                            velocityPet.spawn(p.getLocation(), true);
-                        }
+                        if (p.isOnline()) restoreAfterJoin(p, uuid);
                     });
                 });
-                return; // never fall through to reconnectionPets when Velocity is enabled
+            } else {
+                restoreAfterJoin(p, uuid);
             }
+        }, 20L);
+    }
 
-            // Velocity disabled: use the local reconnection map (original behavior).
-            if (reconnectionPets.containsKey(uuid)) {
-                String stored = reconnectionPets.get(uuid);
-                Pet pet = Pet.getFromId(PlayerData.decodeActivePetId(stored));
-                if (pet == null) return;
+    /**
+     * Restore the pets a player had before disconnecting, after their data is loaded.
+     * Always called on the main thread.
+     */
+    private void restoreAfterJoin(final Player p, final UUID uuid) {
+        if (GlobalConfig.getInstance().isVelocityEnabled()
+                && GlobalConfig.getInstance().isDatabaseSupport()) {
 
-                if (!p.hasPermission(pet.getPermission())) {
-                    reconnectionPets.remove(uuid);
-                    return;
+            // When Velocity is enabled the DB is the ONLY source of truth.
+            boolean isLiveSwitch = VelocitySyncManager.isPlayerSwitching(uuid);
+            VelocitySyncManager.clearSwitchingPlayer(uuid);
+            reconnectionPets.remove(uuid); // discard — DB owns the state
+
+            // Load from DB asynchronously to avoid blocking the main thread
+            Bukkit.getScheduler().runTaskAsynchronously(MCPets.getInstance(), () -> {
+                Databases.ActivePetRecord record = Databases.loadActivePet(uuid);
+                if (record == null) return;
+                if (isLiveSwitch) {
+                    Databases.clearActivePet(uuid);
                 }
+                // Return to main thread to spawn pets (skin restoration uses static maps)
+                Bukkit.getScheduler().runTask(MCPets.getInstance(), () -> {
+                    if (!p.isOnline()) return;
+                    for (String petId : record.getPetIds()) {
+                        Pet template = Pet.getFromId(petId);
+                        if (template == null) continue;
+                        Pet velocityPet = template.copy();
+                        velocityPet.setCheckPermission(false);
+                        velocityPet.setOwner(uuid);
+                        // Restore active skin if one was saved
+                        restoreSkin(p, velocityPet, record.getSkinId(petId));
+                        velocityPet.spawn(p.getLocation(), true);
+                    }
+                });
+            });
+            return; // never fall through to reconnectionPets when Velocity is enabled
+        }
+
+        // Velocity disabled: use the local reconnection map (original behavior).
+        final List<String> storedPets = reconnectionPets.remove(uuid);
+        if (storedPets != null) {
+            // Restore every pet that was active before the disconnect (multi-pet support)
+            for (final String stored : storedPets) {
+                Pet pet = Pet.getFromId(PlayerData.decodeActivePetId(stored));
+                if (pet == null) continue;
+                if (!canUse(p, pet)) continue;
+
                 pet = pet.copy();
                 pet.setCheckPermission(false);
                 pet.setOwner(uuid);
                 restoreSkin(p, pet, PlayerData.decodeActiveSkinId(stored));
                 pet.spawn(p.getLocation(), true);
-                reconnectionPets.remove(uuid);
-            } else if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
-                PlayerData pd = PlayerData.get(uuid);
-                String stored = pd.getLastActivePet();
-                String lastPetId = PlayerData.decodeActivePetId(stored);
-                if (lastPetId != null && !lastPetId.isEmpty()) {
-                    Pet pet = Pet.getFromId(lastPetId);
-                    if (pet != null) {
-                        pet = pet.copy();
-                        pet.setCheckPermission(false);
-                        pet.setOwner(uuid);
-                        restoreSkin(p, pet, PlayerData.decodeActiveSkinId(stored));
-                        pet.spawn(p.getLocation(), true);
-                    }
+            }
+        } else if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
+            PlayerData pd = PlayerData.get(uuid);
+            String stored = pd.getLastActivePet();
+            String lastPetId = PlayerData.decodeActivePetId(stored);
+            if (lastPetId != null && !lastPetId.isEmpty()) {
+                Pet pet = Pet.getFromId(lastPetId);
+                if (pet != null) {
+                    pet = pet.copy();
+                    pet.setCheckPermission(false);
+                    pet.setOwner(uuid);
+                    restoreSkin(p, pet, PlayerData.decodeActiveSkinId(stored));
+                    pet.spawn(p.getLocation(), true);
                 }
             }
-        }, 20L);
+        }
+    }
+
+    private boolean canUse(final Player p, final Pet pet) {
+        final String permission = pet.getPermission();
+        return permission == null || permission.isBlank() || p.hasPermission(permission);
     }
 
     private void restoreSkin(Player p, Pet pet, String skinPathId) {
@@ -301,6 +338,8 @@ public class PetListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
+                    // Player may have disconnected during the 1s respawn delay
+                    if (!p.isOnline()) return;
                     pet.spawn(p, p.getLocation());
                 }
             }.runTaskLater(MCPets.getInstance(), 20L);

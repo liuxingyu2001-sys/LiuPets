@@ -1,3 +1,15 @@
+> **LiuPets 中文版说明**
+>
+> 本项目在原版 MCPets 基础上完成中文本地化、更名与 Liu 插件生态联动，插件名、命令、配置目录为 `LiuPets` / `liupets`，同时保留 `mcpets` 命令别名与旧数据兼容。
+>
+> - 主命令：`/liupets`（别名 `pets`、`mcpets`、`lpets`），无参数直接打开中文「宠物中心」界面。
+> - 坐骑命令：`/mcmounts`（别名 `mounts`）。
+> - 永久解锁（供商城/战令奖励调用）：`/liupets unlock <在线玩家或UUID> <宠物ID>`，基于 LuckPerms 写入权限节点。
+> - 联动：`Liupass`（喂食/驯服/升级进度）、`mcSkills`（目标过滤与宠物伤害保护）；宠物中心只保留宠物功能，不再内置商城/战令等快捷入口。
+> - 联动配置：`plugins/LiuPets/integrations.yml`。
+> - 旧数据迁移：首次启动会自动把 `plugins/MCPets/` 复制到 `plugins/LiuPets/`，原目录保留作为备份。
+> - 若 `language.yml` 仍为旧版英文，删除该文件后重载即可生成默认中文文本。
+
 <img src="https://i.ibb.co/7RYYYZb/spigot-mcpets-banner.png" alt="MC Pets logo">
 
 Welcome to MC Pets!

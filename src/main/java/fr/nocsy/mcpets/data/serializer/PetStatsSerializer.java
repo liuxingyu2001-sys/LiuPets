@@ -89,9 +89,18 @@ public class PetStatsSerializer {
      * Returns the object unserialized from the given serialized string
      */
     public static PetStatsSerializer unserialize(String serialized) {
-        String decoded = new String(Base64.getDecoder().decode(serialized.getBytes()));
-        if (decoded.isEmpty())
+        if (serialized == null || serialized.isBlank())
             return null;
-        return new Gson().fromJson(decoded, PetStatsSerializer.class);
+        try {
+            String decoded = new String(Base64.getDecoder().decode(serialized.getBytes()));
+            if (decoded.isEmpty())
+                return null;
+            return new Gson().fromJson(decoded, PetStatsSerializer.class);
+        } catch (RuntimeException ex) {
+            // Corrupted row / hand-edited file: skip this entry instead of aborting
+            // the whole player-data load (or breaking the join task).
+            fr.nocsy.mcpets.MCPets.getLog().warning("Skipping corrupted pet stats entry: " + ex.getMessage());
+            return null;
+        }
     }
 }

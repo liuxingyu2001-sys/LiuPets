@@ -57,7 +57,7 @@ public class ArgumentName extends AArgument {
 
         boolean stripColor = !p.hasPermission(PPermission.COLOR.getPermission());
 
-        if (name.isEmpty()) {
+        if (name.isEmpty() || name.codePointCount(0, name.length()) > 32) {
             Language.NICKNAME_NOT_CHANGED.sendMessage(p);
             return;
         }

@@ -36,6 +36,16 @@ public class Editor {
         editors.remove(p.getUniqueId());
     }
 
+    /** Forget the editor session of one player (quit). */
+    public static void clear(UUID uuid) {
+        editors.remove(uuid);
+    }
+
+    /** Forget every editor session (plugin disable / reload). */
+    public static void clearAll() {
+        editors.clear();
+    }
+
     public void openEditor() {
         state.openView(player);
     }

@@ -15,8 +15,13 @@ public class EventListener implements Listener {
 
     public static void init(JavaPlugin plugin) {
 
+        listeners.clear();
+        listeners.add(new PetHubListener());
+        listeners.add(new fr.nocsy.mcpets.compat.LiuIntegrations());
+        if (GlobalConfig.getInstance().isWorldGuardSupport()) listeners.add(new PetDamageFlagListener());
         listeners.add(new PetMenuListener());
         listeners.add(new MountMenuListener());
+        listeners.add(new ActivePetsMenuListener());
         listeners.add(new PetInteractionMenuListener());
         listeners.add(new PetListener());
         listeners.add(new CategoriesMenuListener());
@@ -40,9 +45,7 @@ public class EventListener implements Listener {
             plugin.getServer().getPluginManager().registerEvents(l, plugin);
         }
 
-        if (GlobalConfig.getInstance().isWorldGuardSupport()) {
-            listeners.add(new PetDamageFlagListener());
-        }
+
     }
 
 }

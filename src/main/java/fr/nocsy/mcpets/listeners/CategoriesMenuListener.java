@@ -29,6 +29,10 @@ public class CategoriesMenuListener implements Listener {
 
         e.setCancelled(true);
 
+        if (e.getRawSlot() < 0 || e.getRawSlot() >= e.getInventory().getSize()) {
+            return;
+        }
+
         final ItemStack it = e.getCurrentItem();
         if (it == null || it.getType().isAir()) {
             return;
@@ -38,18 +42,26 @@ public class CategoriesMenuListener implements Listener {
 
         if (tag != null) {
             if (tag.startsWith("AlmPetPreviousPage;")) {
-                String[] parts = tag.split(";");
-                int page = Integer.parseInt(parts[1]);
-                CategoryType filterType = parts.length > 2 ? CategoryType.valueOf(parts[2]) : CategoryType.PET;
-                CategoriesMenu.openFiltered(p, filterType, Math.max(page - 1, 0));
+                try {
+                    String[] parts = tag.split(";");
+                    int page = Integer.parseInt(parts[1]);
+                    CategoryType filterType = parts.length > 2 ? CategoryType.valueOf(parts[2]) : CategoryType.PET;
+                    CategoriesMenu.openFiltered(p, filterType, Math.max(page - 1, 0));
+                } catch (RuntimeException ignored) {
+                    // Malformed/legacy tag: ignore instead of kicking the player with an exception
+                }
                 return;
             }
 
             if (tag.startsWith("AlmPetNextPage;")) {
-                String[] parts = tag.split(";");
-                int page = Integer.parseInt(parts[1]);
-                CategoryType filterType = parts.length > 2 ? CategoryType.valueOf(parts[2]) : CategoryType.PET;
-                CategoriesMenu.openFiltered(p, filterType, page + 1);
+                try {
+                    String[] parts = tag.split(";");
+                    int page = Integer.parseInt(parts[1]);
+                    CategoryType filterType = parts.length > 2 ? CategoryType.valueOf(parts[2]) : CategoryType.PET;
+                    CategoriesMenu.openFiltered(p, filterType, page + 1);
+                } catch (RuntimeException ignored) {
+                    // Malformed/legacy tag
+                }
                 return;
             }
         }

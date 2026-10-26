@@ -18,7 +18,7 @@ import fr.nocsy.mcpets.utils.debug.Debugger;
 
 public class PetFoodBuff {
 
-    public static Map<Pet, List<PetFoodBuff>> runningBuffs = new HashMap<>();
+    public static Map<Pet, List<PetFoodBuff>> runningBuffs = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Getter
     private PetFoodType type;
@@ -56,9 +56,10 @@ public class PetFoodBuff {
     }
 
     private void runTask() {
-        List<PetFoodBuff> buffs = getBuffs(pet);
+        // computeIfAbsent: getBuffs() intentionally returns an immutable empty list,
+        // so buffs.add() used to throw UnsupportedOperationException on the first buff.
+        final List<PetFoodBuff> buffs = runningBuffs.computeIfAbsent(pet, k -> new ArrayList<>());
         buffs.add(this);
-        runningBuffs.put(pet, buffs);
 
         Debugger.send("§7Applying buff §a" + type.name() + "§7 on §6" + pet.getId() + "§7 for §a" + duration + "§7 ticks.");
         Debugger.send("§7Buff information: " +
@@ -74,15 +75,23 @@ public class PetFoodBuff {
     }
 
     public void stop() {
-        List<PetFoodBuff> buffs = runningBuffs.get(pet);
+        final List<PetFoodBuff> buffs = runningBuffs.get(pet);
         if (buffs == null) return;
 
         buffs.remove(this);
+        if (buffs.isEmpty()) runningBuffs.remove(pet);
         Debugger.send("§7Buff §a" + type.name() + "§7 applied to §6" + pet.getId() + "§7 has §cexpired§7 after §a" + duration + "§7 ticks.");
     }
 
     public static List<PetFoodBuff> getBuffs(Pet pet) {
         return runningBuffs.getOrDefault(pet, List.of());
+    }
+
+    /**
+     * Drop all running buff references (plugin disable / reload).
+     */
+    public static void clearAll() {
+        runningBuffs.clear();
     }
 
 }

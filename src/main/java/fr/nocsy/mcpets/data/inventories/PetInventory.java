@@ -19,12 +19,13 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class PetInventory {
 
     @Getter
-    private static HashMap<UUID, HashMap<String, PetInventory>> petInventories = new HashMap<>();
+    private static Map<UUID, Map<String, PetInventory>> petInventories = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Getter
     private Inventory inventory;
@@ -55,20 +56,32 @@ public class PetInventory {
             }
         }
 
-        HashMap<String, PetInventory> builtIn = petInventories.get(pet.getOwner());
-        if (builtIn == null) {
-            HashMap<String, PetInventory> map = new HashMap<>();
-            map.put(pet.getId(), this);
-            petInventories.put(pet.getOwner(), map);
-        }
-        else {
-            builtIn.put(pet.getId(), this);
-            petInventories.put(pet.getOwner(), builtIn);
-        }
+        final Map<String, PetInventory> builtIn =
+                petInventories.computeIfAbsent(pet.getOwner(), k -> new java.util.concurrent.ConcurrentHashMap<>());
+        builtIn.put(pet.getId(), this);
     }
 
     public static void removePlayer(UUID owner) {
         petInventories.remove(owner);
+    }
+
+    /**
+     * Flush every currently open pet inventory into its owner's PlayerData.
+     * Called on disable so items survive a restart even if the GUI was never closed.
+     */
+    public static void saveAllOpen() {
+        for (java.util.Map.Entry<UUID, Map<String, PetInventory>> entry : petInventories.entrySet()) {
+            final PlayerData pd = PlayerData.get(entry.getKey());
+            if (pd == null) continue;
+            for (PetInventory inventory : entry.getValue().values()) {
+                pd.setPetInventory(inventory);
+            }
+        }
+    }
+
+    /** Drop all cached pet inventories (plugin disable / reload). */
+    public static void clearCache() {
+        petInventories.clear();
     }
 
     public static PetInventory get(UUID owner, String petId) {
@@ -88,7 +101,13 @@ public class PetInventory {
             return null;
         if (pet.getInventorySize() <= 0)
             return null;
-        HashMap<String, PetInventory> registeredMap = petInventories.get(pet.getOwner());
+        if (GlobalConfig.getInstance().isDatabaseSupport()) {
+            final PlayerData pd = PlayerData.get(pet.getOwner());
+            // Row not read yet: an empty inventory here would be saved over real data.
+            if (pd != null && !pd.isLoaded())
+                return null;
+        }
+        Map<String, PetInventory> registeredMap = petInventories.get(pet.getOwner());
         if (registeredMap != null
                 && registeredMap.get(pet.getId()) != null
                 && registeredMap.get(pet.getId()).getInventory().getSize() == pet.getInventorySize()) {
@@ -98,6 +117,20 @@ public class PetInventory {
         Inventory inv = null;
         if (registeredMap != null && registeredMap.get(pet.getId()) != null) {
             inv = registeredMap.get(pet.getId()).getInventory();
+        }
+        if (inv == null) {
+            // DB/YAML data is stored serialized; materialize it lazily on the main thread.
+            final PlayerData pd = PlayerData.get(pet.getOwner());
+            final String serialized = pd != null
+                    ? pd.getMapOfRegisteredInventories().get(pet.getId())
+                    : null;
+            if (serialized != null && !serialized.isBlank()) {
+                try {
+                    inv = unserializeInventory(serialized);
+                } catch (IOException ex) {
+                    MCPets.getLog().warning("Could not restore pet inventory of " + pet.getId() + ": " + ex.getMessage());
+                }
+            }
         }
         return new PetInventory(pet, inv, pet.getOwner());
     }
@@ -113,9 +146,12 @@ public class PetInventory {
      * associate it to the said owner
      */
     public static PetInventory unserialize(String serialized, @NotNull UUID owner) {
-        String[] data = serialized.split(";");
-        if (data.length != 2)
-            throw new IllegalArgumentException("Serialized doesn't match the data format : " + serialized);
+        if (serialized == null) return null;
+        String[] data = serialized.split(";", 2);
+        if (data.length != 2) {
+            MCPets.getLog().warning("Skipping malformed pet inventory entry: " + serialized);
+            return null;
+        }
         String petId = data[0];
 
         Pet pet = Pet.getFromId(petId);
@@ -151,13 +187,13 @@ public class PetInventory {
         new BukkitRunnable() {
             @Override
             public void run() {
+                if (!p.isOnline()) return;
                 p.openInventory(inventory);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        p.setMetadata("MCPets;petInventory", new FixedMetadataValue(MCPets.getInstance(), pet.getId()));
-                    }
-                }.runTaskLater(MCPets.getInstance(), 2L);
+                // Set the marker immediately after the view switches: the previous
+                // view's InventoryCloseEvent already ran inside openInventory(), and a
+                // player can close this GUI on the very next tick. The old 2-tick delay
+                // lost the save and could tag a later, unrelated GUI as a pet inventory.
+                p.setMetadata("MCPets;petInventory", new FixedMetadataValue(MCPets.getInstance(), pet.getId()));
             }
         }.runTaskLater(MCPets.getInstance(), 2L);
     }
@@ -168,13 +204,16 @@ public class PetInventory {
      */
     public void close(Player p) {
         p.setMetadata("MCPets;petInventory", new FixedMetadataValue(MCPets.getInstance(), null));
+        final PlayerData pd = PlayerData.getRegisteredData().get(p.getUniqueId());
+        if (pd == null)
+            return;
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (!GlobalConfig.getInstance().isDatabaseSupport())
-                    PlayerDataNoDatabase.get(p.getUniqueId()).save();
-                else
-                    PlayerData.saveDB();
+                // Only this player's data: saveDB() used to rewrite every row on each
+                // inventory close. Captured reference also avoids recreating a cache
+                // entry after the player has already quit.
+                pd.save();
             }
         }.runTaskAsynchronously(MCPets.getInstance());
     }
@@ -191,7 +230,7 @@ public class PetInventory {
             {
                 String petId = (String)p.getMetadata("MCPets;petInventory").getFirst().value();
                 UUID owner = p.getUniqueId();
-                HashMap<String, PetInventory> map = petInventories.get(owner);
+                Map<String, PetInventory> map = petInventories.get(owner);
                 if (map != null) {
                     return map.get(petId);
                 }

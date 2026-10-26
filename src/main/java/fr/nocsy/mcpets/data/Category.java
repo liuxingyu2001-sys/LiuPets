@@ -5,6 +5,7 @@ import java.util.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -13,6 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import fr.nocsy.mcpets.utils.Utils;
 import fr.nocsy.mcpets.utils.PDCTag;
 import fr.nocsy.mcpets.utils.MenuPaginationHelper;
+import fr.nocsy.mcpets.data.inventories.PetHub;
 import fr.nocsy.mcpets.data.inventories.PetInventoryHolder;
 import fr.nocsy.mcpets.utils.MenuPaginationHelper.PaginationConfig;
 
@@ -21,7 +23,7 @@ public class Category {
     @Getter
     private static List<Category> categories = new ArrayList<>();
     @Getter
-    private static Map<UUID, Category> categoryView = new HashMap<>();
+    private static Map<UUID, Category> categoryView = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Getter
     private final String id;
@@ -64,18 +66,21 @@ public class Category {
     }
 
     public boolean openInventory(final Player p, final int page) {
-        if (page >= maxPages || page < 0) return false;
-
-        p.closeInventory();
+        if (page < 0) return false;
+        if (maxPages > 0 && page >= maxPages) return false;
 
         final List<Pet> playerPets = new ArrayList<>();
         for (Pet pet : pets) {
             if (!pet.has(p)) continue;
             playerPets.add(pet);
         }
-        
-        if (playerPets.isEmpty() && page > 0) return false;
-        
+
+        // Page count must be based on the pets this player can actually see,
+        // otherwise a next-page click can close the menu on an empty page.
+        if (page >= MenuPaginationHelper.calculateMaxPages(playerPets.size())) return false;
+
+        p.closeInventory();
+
         PaginationConfig config = MenuPaginationHelper.calculatePagination(page, playerPets.size());
 
         final List<Pet> petsForPage = new ArrayList<>();
@@ -94,8 +99,18 @@ public class Category {
         }
 
         int slot = config.startSlot();
-        for (Pet pet : petsForPage) {
+        for (final Pet template : petsForPage) {
+            // Build from an owner-bound copy: placeholders resolve for this player,
+            // and no call ever mutates the shared template instance.
+            final Pet pet = template.copy();
+            pet.setOwner(p.getUniqueId());
+            pet.setPetStats();
             inventory.setItem(slot++, pet.buildItem(pet.getIcon(), true));
+        }
+
+        if (playerPets.isEmpty()) {
+            inventory.setItem(Math.max(1, config.invSize() / 2),
+                    PetHub.button(Material.BARRIER, "§7该分类暂无可用宠物", "§7解锁宠物或联系管理员配置权限"));
         }
 
         p.openInventory(inventory);
@@ -178,6 +193,21 @@ public class Category {
      */
     public static Category getCategoryView(final Player p) {
         return categoryView.get(p.getUniqueId());
+    }
+
+    /**
+     * Forget every cached category view (plugin disable / reload).
+     */
+    public static void clearViews() {
+        categoryView.clear();
+    }
+
+    /**
+     * Drop the loaded categories and cached views.
+     */
+    public static void clearAll() {
+        categories.clear();
+        categoryView.clear();
     }
 
 }

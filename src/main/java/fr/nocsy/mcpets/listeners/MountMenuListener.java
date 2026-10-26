@@ -30,12 +30,18 @@ public class MountMenuListener implements Listener {
             return;
         }
 
+        // Cancel every click in this GUI: empty slots must not accept items either
+        e.setCancelled(true);
+
+        // Only the top inventory contains menu icons; never read player's own slots
+        if (e.getRawSlot() < 0 || e.getRawSlot() >= e.getInventory().getSize()) {
+            return;
+        }
+
         final ItemStack it = e.getCurrentItem();
         if (it == null || it.getType().isAir()) {
             return;
         }
-
-        e.setCancelled(true);
 
         if (MenuPaginationHelper.handlePagination(it, p,
                 "AlmPetPreviousPage;", "AlmPetNextPage;",
@@ -45,6 +51,15 @@ public class MountMenuListener implements Listener {
 
         final Pet petObject = Pet.getFromIcon(it);
         if (petObject != null) {
+            final Pet active = Pet.getActivePetsForOwner(p.getUniqueId()).stream()
+                    .filter(pet -> pet.getId().equalsIgnoreCase(petObject.getId()))
+                    .findFirst().orElse(null);
+            if (active != null) {
+                p.closeInventory();
+                active.setLastInteractedWith(p);
+                new fr.nocsy.mcpets.data.inventories.MountInteractionMenu(active, p.getUniqueId()).open(p);
+                return;
+            }
             p.closeInventory();
             final Pet pet = petObject.copy();
             pet.spawnWithMessage(p);

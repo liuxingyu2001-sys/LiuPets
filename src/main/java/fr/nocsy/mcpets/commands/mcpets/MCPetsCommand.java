@@ -15,7 +15,7 @@ public class MCPetsCommand implements CCommand {
 
     @Override
     public String getName() {
-        return "mcpets";
+        return "liupets";
     }
 
     @Override
@@ -36,9 +36,32 @@ public class MCPetsCommand implements CCommand {
     public void execute(CommandSender sender, Command command, String label, String[] args) {
         if (sender.hasPermission(getPermission())) {
 
+            if (args.length > 0 && args[0].equalsIgnoreCase("unlock")) {
+                if (!sender.hasPermission(getAdminPermission())) { Language.NO_PERM.sendMessage(sender); return; }
+                if (args.length != 3) { sender.sendMessage("§e/liupets unlock <在线玩家或UUID> <宠物ID>"); return; }
+                org.bukkit.entity.Player target = org.bukkit.Bukkit.getPlayerExact(args[1]);
+                java.util.UUID uuid;
+                try { uuid = target != null ? target.getUniqueId() : java.util.UUID.fromString(args[1]); }
+                catch (IllegalArgumentException ex) { sender.sendMessage("§c玩家不在线，请使用玩家 UUID。"); return; }
+                fr.nocsy.mcpets.api.LiuPetsAPI.unlock(uuid, args[2]).whenComplete((result, failure) ->
+                    org.bukkit.Bukkit.getScheduler().runTask(fr.nocsy.mcpets.MCPets.getInstance(), () -> {
+                        if (failure != null) { sender.sendMessage("§c解锁失败：" + failure.getMessage()); return; }
+                        sender.sendMessage("§a已永久解锁宠物：" + args[2]);
+                        if (target != null && target.isOnline()) target.sendMessage("§a已获得新宠物！使用 /liupets 查看。");
+                    }));
+                return;
+            }
+            if (args.length == 1 && args[0].equalsIgnoreCase("help")) {
+                Language.USAGE.sendMessage(sender);
+                if (sender.hasPermission(getAdminPermission())) sender.sendMessage("§e/liupets reload §7重载\n§e/liupets editor §7配置编辑器\n§e/liupets unlock <玩家或UUID> <宠物ID> §7永久解锁（LuckPerms）");
+                return;
+            }
+            if (sender instanceof Player player && args.length == 1 && args[0].equalsIgnoreCase("list")) {
+                player.openInventory(new PetMenu(player, 0).getInventory());
+                return;
+            }
             if (sender instanceof Player && args.length == 0) {
-                PetMenu menu = new PetMenu((Player) sender, 0);
-                menu.open((Player) sender);
+                fr.nocsy.mcpets.data.inventories.PetHub.open((Player) sender);
                 return;
             }
 
@@ -72,7 +95,7 @@ public class MCPetsCommand implements CCommand {
             for(AArgument argument : outcomes) {
                 if(argument.nameMatchesButIncomplete()) {
                     if (argument.getUsage() != null) {
-                        sender.sendMessage("§cMissing arguments. Usage: §e" + argument.getUsage());
+                        sender.sendMessage("§c参数不完整，用法：§e" + argument.getUsage().replace("/mcpets", "/liupets"));
                     } else {
                         Language.USAGE.sendMessage(sender);
                     }
@@ -80,8 +103,7 @@ public class MCPetsCommand implements CCommand {
                 }
             }
 
-            if (sender.hasPermission(getAdminPermission()))
-                Language.USAGE.sendMessage(sender);
+            Language.USAGE.sendMessage(sender);
         }
         else {
             Language.NO_PERM.sendMessage(sender);

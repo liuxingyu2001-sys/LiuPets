@@ -66,10 +66,13 @@ public class ItemsListConfig extends AbstractConfig {
     public void reload() {
         loadConfig();
 
+        items.clear();
         for (String key : getConfig().getKeys(false)) {
             if (getConfig().getItemStack(key) == null) continue;
             items.put(key, getConfig().getItemStack(key));
         }
+        // Menu icon enum caches clones; refresh so /liupets reload applies edits.
+        Items.refreshAll();
     }
 
     /**

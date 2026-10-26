@@ -34,13 +34,7 @@ public class PlayerDataNoDatabase extends AbstractConfig {
     }
 
     public static PlayerDataNoDatabase get(UUID owner) {
-        if (cacheMap.containsKey(owner))
-            return cacheMap.get(owner);
-        else {
-            PlayerDataNoDatabase pdn = new PlayerDataNoDatabase(owner);
-            cacheMap.put(owner, pdn);
-            return pdn;
-        }
+        return cacheMap.computeIfAbsent(owner, PlayerDataNoDatabase::new);
     }
 
     public void init() {
@@ -59,7 +53,7 @@ public class PlayerDataNoDatabase extends AbstractConfig {
     }
 
     @Override
-    public void save() {
+    public synchronized void save() {
 
         ArrayList<String> serializedNamesMap = new ArrayList<>();
 
@@ -72,15 +66,17 @@ public class PlayerDataNoDatabase extends AbstractConfig {
         getConfig().set("Names", serializedNamesMap);
 
         ArrayList<String> serializedInventoriesMap = new ArrayList<>();
-        mapOfRegisteredInventories.clear();
+        // Keep serialized inventories not yet materialized, then overlay live ones.
         if (PetInventory.getPetInventories().containsKey(uuid)) {
-            HashMap<String, PetInventory> inventories = PetInventory.getPetInventories().get(uuid);
+            HashMap<String, PetInventory> inventories = new HashMap<>(PetInventory.getPetInventories().get(uuid));
             for (String petId : inventories.keySet()) {
                 mapOfRegisteredInventories.put(petId, inventories.get(petId).serialize());
-                String seriaInv = mapOfRegisteredInventories.get(petId);
-                String seria = petId + ";" + seriaInv;
-                serializedInventoriesMap.add(seria);
             }
+        }
+        for (String petId : mapOfRegisteredInventories.keySet()) {
+            String seriaInv = mapOfRegisteredInventories.get(petId);
+            if (seriaInv == null) continue;
+            serializedInventoriesMap.add(petId + ";" + seriaInv);
         }
 
         getConfig().set("Inventories", serializedInventoriesMap);
@@ -113,7 +109,8 @@ public class PlayerDataNoDatabase extends AbstractConfig {
         // Unserialize the names
         mapOfRegisteredNames.clear();
         for (String seria : getConfig().getStringList("Names")) {
-            String[] table = seria.split(";");
+            String[] table = seria.split(";", 2);
+            if (table.length < 2) continue;
             String id = table[0];
             String name = table[1];
 
@@ -123,7 +120,8 @@ public class PlayerDataNoDatabase extends AbstractConfig {
         // Unserialize the inventories
         mapOfRegisteredInventories.clear();
         for (String seria : getConfig().getStringList("Inventories")) {
-            String[] table = seria.split(";");
+            String[] table = seria.split(";", 2);
+            if (table.length < 2) continue;
             String id = table[0];
             String seriaInventory = table[1];
 

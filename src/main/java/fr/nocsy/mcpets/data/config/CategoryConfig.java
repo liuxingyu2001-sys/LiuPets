@@ -154,6 +154,8 @@ public class CategoryConfig extends AbstractConfig {
     public static void load(final String folderPath, final boolean clear) {
         if (clear) {
             Category.getCategories().clear();
+            Category.clearViews();
+            mapping.clear();
         }
 
         final File folder = new File(folderPath);

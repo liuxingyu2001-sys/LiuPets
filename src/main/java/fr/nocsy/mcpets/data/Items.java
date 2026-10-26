@@ -86,9 +86,24 @@ public enum Items {
 
     private void prepareItem() {
         ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
         PDCTag.set(meta, getLocalizedName());
-        
+
         item.setItemMeta(meta);
+    }
+
+    /**
+     * Re-read the configured icons after /liupets reload. The enum caches ItemStacks
+     * at class-init time, so without this menuIcons.yml edits need a server restart.
+     */
+    public static void refreshAll() {
+        for (Items entry : values()) {
+            final ItemStack configured = ItemsListConfig.getInstance().getItemStack(entry.name);
+            if (configured == null || configured.getType().isAir())
+                continue;
+            entry.item = configured.clone();
+            entry.prepareItem();
+        }
     }
 
     public String getLocalizedName() {
@@ -214,11 +229,7 @@ public enum Items {
     }
 
     public static ItemStack nextPage(int index, Player p, int maxPages, CategoryType filterType) {
-        // Fallback to page_selector for compatibility
-        ItemStack it = ItemsListConfig.getInstance().getItemStack("next_page_selector");
-        if (it == null) {
-            it = ItemsListConfig.getInstance().getItemStack("page_selector");
-        }
+        ItemStack it = pageSelector("next_page_selector", NEXT_PAGE_SELECTOR);
 
         ItemMeta meta = it.getItemMeta();
         meta.displayName(Language.NEXT_PAGE_ITEM_NAME.getComponentFormatted(
@@ -242,11 +253,7 @@ public enum Items {
     }
 
     public static ItemStack previousPage(int index, Player p, int maxPages, CategoryType filterType) {
-        // Fallback to page_selector for compatibility
-        ItemStack it = ItemsListConfig.getInstance().getItemStack("previous_page_selector");
-        if (it == null) {
-            it = ItemsListConfig.getInstance().getItemStack("page_selector");
-        }
+        ItemStack it = pageSelector("previous_page_selector", PREVIOUS_PAGE_SELECTOR);
 
         ItemMeta meta = it.getItemMeta();
         meta.displayName(Language.PREVIOUS_PAGE_ITEM_NAME.getComponentFormatted(
@@ -384,6 +391,21 @@ public enum Items {
         if (split.length == 2) return split[1];
 
         return null;
+    }
+
+    /**
+     * Read a page selector icon, falling back to the built-in enum icon when the
+     * server owner removed the key (or set it to air) in menuIcons.yml.
+     */
+    private static ItemStack pageSelector(final String configKey, final Items fallback) {
+        ItemStack it = ItemsListConfig.getInstance().getItemStack(configKey);
+        if (it == null)
+            it = ItemsListConfig.getInstance().getItemStack("page_selector");
+        if (it == null || it.getType().isAir() || it.getItemMeta() == null)
+            it = fallback.getItem().clone();
+        else
+            it = it.clone();
+        return it;
     }
 
 }

@@ -19,4 +19,14 @@ public class EditorPageSelection {
         set(p, 0);
         return pageview.get(p.getUniqueId());
     }
+
+    /** Forget the page selection of one player (quit). */
+    public static void clear(java.util.UUID uuid) {
+        pageview.remove(uuid);
+    }
+
+    /** Forget every page selection (plugin disable / reload). */
+    public static void clearAll() {
+        pageview.clear();
+    }
 }

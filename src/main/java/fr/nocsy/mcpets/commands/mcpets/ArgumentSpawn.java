@@ -25,7 +25,12 @@ public class ArgumentSpawn extends AArgument {
         String petId = args[1];
         String playerName = args[2];
         String booleanValue = args[3];
-        boolean silent = args.length == 5 && args[4].equals("-s");
+        boolean silent = args.length == 5 && args[4].equalsIgnoreCase("-s");
+
+        if (!booleanValue.equalsIgnoreCase("true") && !booleanValue.equalsIgnoreCase("false")) {
+            Language.INVALID_BOOLEAN.sendMessage(sender);
+            return;
+        }
 
         Player target = Bukkit.getPlayer(playerName);
         if (target == null) {
@@ -41,7 +46,8 @@ public class ArgumentSpawn extends AArgument {
         Pet pet = petObject.copy();
 
         boolean checkPermission = booleanValue.equalsIgnoreCase("true");
-        if (checkPermission && !target.hasPermission(pet.getPermission())) {
+        if (checkPermission && pet.getPermission() != null && !pet.getPermission().isBlank()
+                && !target.hasPermission(pet.getPermission())) {
             Language.NOT_ALLOWED.sendMessage(target);
             return;
         }

@@ -66,13 +66,21 @@ public class MountMenu {
         for (final Pet mount : selectedMounts) {
             inventory.setItem(slot++, mount.buildItem(mount.getIcon(), true));
         }
-        
-        if (config.needsPreviousButton()) {
-            inventory.setItem(0, Items.previousPage(page, p, 1));
+
+        if (availableMounts.isEmpty()) {
+            inventory.setItem(Math.max(1, config.invSize() / 2), PetHub.button(org.bukkit.Material.BARRIER,
+                    "§7还没有可用坐骑", "§7给宠物配置 Mountable: true", "§e使用 /liupets 返回宠物中心"));
         }
         
+        final int maxPages = Math.max(1, MenuPaginationHelper.calculateMaxPages(availableMounts.size()));
+        final int currentPage = Math.clamp(page, 0, maxPages - 1);
+
+        if (config.needsPreviousButton()) {
+            inventory.setItem(0, Items.previousPage(currentPage, p, maxPages));
+        }
+
         if (config.needsNextButton()) {
-            inventory.setItem(config.invSize() - 1, Items.nextPage(page, p, 1));
+            inventory.setItem(config.invSize() - 1, Items.nextPage(currentPage, p, maxPages));
         }
     }
 

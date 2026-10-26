@@ -4,12 +4,12 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
 
 public class PlayerSignal {
 
-    private static final HashMap<UUID, SignalWrapper> orderMap = new HashMap<>();
+    private static final java.util.Map<UUID, SignalWrapper> orderMap = new ConcurrentHashMap<>();
 
     /**
      * Set the active signal for the player
@@ -48,10 +48,24 @@ public class PlayerSignal {
     public static boolean isCompatible(UUID owner, String signal) {
         Pet pet = Pet.fromOwner(owner);
 
-        if (!pet.isStillHere())
+        if (pet == null || !pet.isStillHere())
             return false;
 
         return pet.getSignals().contains(signal);
+    }
+
+    /**
+     * Forget the cached signal of a player (quit / disable).
+     */
+    public static void clear(UUID owner) {
+        orderMap.remove(owner);
+    }
+
+    /**
+     * Forget every cached signal (plugin disable / reload).
+     */
+    public static void clearAll() {
+        orderMap.clear();
     }
 
     /**

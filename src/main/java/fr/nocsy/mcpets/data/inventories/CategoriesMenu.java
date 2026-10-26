@@ -61,13 +61,24 @@ public class CategoriesMenu {
         final Inventory inventory = new PetInventoryHolder(config.invSize(), menuTitle, PetInventoryHolder.Type.CATEGORIES_MENU).getInventory();
 
         int slot = config.startSlot();
+        int placed = 0;
         for (Category category : selectedCategories) {
             for (Pet pet : category.getPets()) {
                 if (pet.has(p)) {
                     inventory.setItem(slot++, category.getIcon());
+                    placed++;
                     break;
                 }
             }
+        }
+
+        if (placed == 0) {
+            final String label = filterType == CategoryType.MOUNT ? "§6还没有坐骑分类" : "§7还没有宠物分类";
+            final String hint = filterType == CategoryType.MOUNT
+                    ? "§7在 Categories 目录创建坐骑分类"
+                    : "§7在 Categories 目录创建宠物分类";
+            inventory.setItem(Math.max(1, config.invSize() / 2),
+                    PetHub.button(org.bukkit.Material.BARRIER, label, hint, "§e使用 /liupets 返回宠物中心"));
         }
 
         int maxPages = MenuPaginationHelper.calculateMaxPages(categoriesToShow.size());

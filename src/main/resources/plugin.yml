@@ -1,6 +1,6 @@
 name: '${project.name}'
 version: '${project.version}'
-description: MCModels affiliate plugin. Join the workshop! https://discord.gg/p7QTm2gUyf
+description: 中文宠物、坐骑与养成系统，支持 Liu 插件生态联动
 load: POSTWORLD
 author: Nocsy
 website: 'https://mcpets.gitbook.io/mcpets'
@@ -19,24 +19,38 @@ softdepend:
   - LuckPerms
   - PlaceholderAPI
   - ItemsAdder
+  - Liupass
+  - mcSkills
 loadbefore: []
 
 # Plugin messaging channel "mcpets:sync" is registered in code via Bukkit.getMessenger()
 # (the 'channels' key is not part of the Bukkit plugin descriptor schema)
 
 commands:
-  mcpets:
-    description: Command to manage your pets
-    Usage: /mcpets
+  liupets:
+    description: 打开宠物中心或管理宠物
+    usage: /liupets
     permission: mcpets.use
-    aliases: [pets]
+    aliases: [pets, mcpets, lpets]
   mcmounts:
-    description: Command to view your mounts
-    Usage: /mcmounts
+    description: 打开坐骑菜单
+    usage: /mcmounts
     permission: mcpets.use
     aliases: [mounts]
 
 permissions:
+  liupets.use:
+    default: true
+    children:
+      mcpets.use: true
+  liupets.admin:
+    default: op
+    children:
+      mcpets.admin: true
+  liupets.color:
+    default: op
+    children:
+      mcpets.color: true
   mcpets.use:
     default: true
   mcpets.admin:

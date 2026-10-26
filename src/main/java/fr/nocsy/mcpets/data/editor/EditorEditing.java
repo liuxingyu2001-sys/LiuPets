@@ -26,4 +26,14 @@ public class EditorEditing {
             editing.put(p.getUniqueId(), new EditorEditing());
         return editing.get(p.getUniqueId());
     }
+
+    /** Forget the editing session of one player (quit). */
+    public static void clear(java.util.UUID uuid) {
+        editing.remove(uuid);
+    }
+
+    /** Forget every editing session (plugin disable / reload). */
+    public static void clearAll() {
+        editing.clear();
+    }
 }

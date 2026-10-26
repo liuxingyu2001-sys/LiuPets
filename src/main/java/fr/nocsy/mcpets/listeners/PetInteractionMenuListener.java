@@ -62,7 +62,8 @@ public class PetInteractionMenuListener implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                PetSkin.openInventory(p, pet);
+                if (!PetSkin.openInventory(p, pet))
+                    Language.NO_SKIN_AVAILABLE.sendMessage(p);
             }
         }.runTaskLater(MCPets.getInstance(), 2L);
     }
@@ -88,7 +89,7 @@ public class PetInteractionMenuListener implements Listener {
                 return;
             }
 
-            if (e.getClickedInventory() == null) {
+            if (e.getRawSlot() < 0 || e.getRawSlot() >= e.getInventory().getSize()) {
                 return;
             }
 
@@ -137,39 +138,41 @@ public class PetInteractionMenuListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void quit(org.bukkit.event.player.PlayerQuitEvent event) {
+        waitingForAnswer.remove(event.getPlayer().getUniqueId());
+    }
+
     @EventHandler(priority = EventPriority.LOWEST)
     public void chat(final AsyncPlayerChatEvent e) {
         final Player p = e.getPlayer();
-
-        if (waitingForAnswer.contains(p.getUniqueId())) {
-            waitingForAnswer.remove(p.getUniqueId());
-            e.setCancelled(true);
-
-            String name = e.getMessage().replace("'", "");
-            name = name.replace(";;", ";").replace(";;;", ";");
-
+        if (!waitingForAnswer.remove(p.getUniqueId())) return;
+        e.setCancelled(true);
+        final String input = e.getMessage();
+        org.bukkit.Bukkit.getScheduler().runTask(MCPets.getInstance(), () -> {
+            if (!p.isOnline()) return;
+            String name = input.trim().replace("'", "").replace(";", "");
+            if (name.equalsIgnoreCase("cancel") || name.equals("取消")) {
+                p.sendMessage("§7已取消宠物改名。");
+                return;
+            }
             final String blackListedWord = Utils.isInBlackList(name);
             if (blackListedWord != null) {
                 Language.BLACKLISTED_WORD.sendMessageFormatted(p, new FormatArg("%word%", blackListedWord));
                 return;
             }
-
             final Pet pet = Optional.ofNullable(Pet.getFromLastInteractedWith(p)).orElse(Pet.getFromLastOpInteractedWith(p));
-
-            if (pet != null && pet.isStillHere()) {
-                boolean stripColor = !p.hasPermission(PPermission.COLOR.getPermission());
-
-                if (name.isEmpty()) {
-                    Language.NICKNAME_NOT_CHANGED.sendMessage(p);
-                    return;
-                }
-                pet.setDisplayName(name, true, stripColor);
-
-                Language.NICKNAME_CHANGED_SUCCESSFULY.sendMessage(p);
-            } else {
+            if (pet == null || !pet.isStillHere()) {
                 Language.REVOKED_BEFORE_CHANGES.sendMessage(p);
+                return;
             }
-        }
+            if (name.isEmpty() || name.codePointCount(0, name.length()) > 32) {
+                Language.NICKNAME_NOT_CHANGED.sendMessage(p);
+                return;
+            }
+            pet.setDisplayName(name, true, !p.hasPermission(PPermission.COLOR.getPermission()));
+            Language.NICKNAME_CHANGED_SUCCESSFULY.sendMessage(p);
+        });
     }
 
     private void openBackPetMenu(final Player p) {

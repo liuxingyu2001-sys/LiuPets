@@ -136,9 +136,9 @@ public class GlobalConfig extends AbstractConfig {
         super.init("", "config.yml");
 
         if (getConfig().get("Prefix") == null)
-            getConfig().set("Prefix", "§8[§6MCPets§8] » ");
+            getConfig().set("Prefix", "§8[§bLiuPets§8] » ");
         if (getConfig().get("DefaultName") == null)
-            getConfig().set("DefaultName", "§9Pet of %player%");
+            getConfig().set("DefaultName", "§9%player% 的宠物");
         if (getConfig().get("OverrideDefaultName") == null)
             getConfig().set("OverrideDefaultName", true);
         if (getConfig().get("EnableClickBackToMenu") == null)
@@ -258,6 +258,7 @@ public class GlobalConfig extends AbstractConfig {
         nameable = getConfig().getBoolean("Nameable");
         mountable = getConfig().getBoolean("Mountable");
         dismountOnDamaged = getConfig().getBoolean("DismountOnDamaged");
+        dismountOnDamagedExcludePlayers = getConfig().getBoolean("DismountOnDamagedExcludePlayers");
         spawnPetOnReconnect = getConfig().getBoolean("SpawnPetOnReconnect");
         distanceTeleport = getConfig().getInt("DistanceTeleport");
         maxNameLength = getConfig().getInt("MaxNameLength");

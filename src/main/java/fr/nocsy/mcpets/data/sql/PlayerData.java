@@ -32,6 +32,14 @@ public class PlayerData {
     @Getter
     private UUID uuid;
 
+    /**
+     * False while a MySQL row has not been read yet. Prevents writing an empty
+     * snapshot over real data when a player joins during DB initialization.
+     */
+    @Setter
+    @Getter
+    private boolean loaded = false;
+
     private static final String ACTIVE_PET_SKIN_DELIMITER = ":";
 
     private PlayerData(UUID uuid) {
@@ -46,27 +54,22 @@ public class PlayerData {
     }
 
     public static PlayerData get(UUID owner) {
+        return registeredData.computeIfAbsent(owner, PlayerData::loadOrCreate);
+    }
 
-        if (registeredData.containsKey(owner)) {
-            return registeredData.get(owner);
-        }
-        else {
-            if (!GlobalConfig.getInstance().isDatabaseSupport()) {
-                PlayerData data = new PlayerData();
-                data.setUuid(owner);
-                PlayerDataNoDatabase pdn = PlayerDataNoDatabase.get(owner);
-                data.setMapOfRegisteredNames(pdn.mapOfRegisteredNames);
-                data.setMapOfRegisteredInventories(pdn.mapOfRegisteredInventories);
-                data.setLastActivePet(pdn.getLastActivePet());
-                registeredData.put(owner, data);
-
-                return data;
-            }
-
-            PlayerData data = new PlayerData(owner);
-            registeredData.put(owner, data);
+    private static PlayerData loadOrCreate(final UUID owner) {
+        if (!GlobalConfig.getInstance().isDatabaseSupport()) {
+            final PlayerData data = new PlayerData();
+            data.setUuid(owner);
+            final PlayerDataNoDatabase pdn = PlayerDataNoDatabase.get(owner);
+            data.setMapOfRegisteredNames(pdn.mapOfRegisteredNames);
+            data.setMapOfRegisteredInventories(pdn.mapOfRegisteredInventories);
+            data.setLastActivePet(pdn.getLastActivePet());
+            data.setLoaded(true);
             return data;
         }
+
+        return new PlayerData(owner);
     }
 
     public static PlayerData getEmpty(UUID owner) {
@@ -124,11 +127,12 @@ public class PlayerData {
             pdn.setMapOfRegisteredNames(mapOfRegisteredNames);
             pdn.setLastActivePet(lastActivePet);
 
-            mapOfRegisteredInventories.clear();
-            HashMap<String, PetInventory> inventories = PetInventory.getPetInventories().get(this.getUuid());
+            // Keep serialized inventories that were never materialized (lazy DB load),
+            // then overlay the live inventories currently cached in memory.
+            final var inventories = PetInventory.getPetInventories().get(this.getUuid());
             if (inventories != null) {
-                for (String petId : inventories.keySet()) {
-                    mapOfRegisteredInventories.put(petId, inventories.get(petId).serialize());
+                for (var entry : inventories.entrySet()) {
+                    mapOfRegisteredInventories.put(entry.getKey(), entry.getValue().serialize());
                 }
             }
 
@@ -149,6 +153,12 @@ public class PlayerData {
     public static void remove(UUID uuid) {
         registeredData.remove(uuid);
         PlayerDataNoDatabase.getCacheMap().remove(uuid);
+    }
+
+    /** Drop every cached player data entry (plugin disable / reload). */
+    public static void clearCache() {
+        registeredData.clear();
+        PlayerDataNoDatabase.getCacheMap().clear();
     }
 
     public static void reloadAll(UUID uuid) {

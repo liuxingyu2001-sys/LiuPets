@@ -191,6 +191,7 @@ public class LivingPetsListener implements Listener {
             return;
 
         PetStats stats = pet.getPetStats();
+        if (stats == null) return;
         // Must run ASync otherwise it's not updating
         new BukkitRunnable() {
             @Override
@@ -260,6 +261,7 @@ public class LivingPetsListener implements Listener {
     // Launch the respawn timer on death
     public void respawnCooldownHandler(PetDeathEvent e) {
         Pet pet = e.getPet();
+        if (pet.getPetStats() == null) return;
         // Set the pet as dead
         pet.getPetStats().setDead();
         // Start the respawn timer

@@ -27,10 +27,17 @@ public class PetSkinsMenuListener implements Listener {
             return;
         }
 
+        // Always cancel, even when the metadata check below would bail out,
+        // otherwise items can be dropped into the empty slots of this GUI.
+        e.setCancelled(true);
+
+        if (e.getRawSlot() < 0 || e.getRawSlot() >= e.getInventory().getSize()) {
+            return;
+        }
+
         if (!PetSkin.hasMetadata(p)) {
             return;
         }
-        e.setCancelled(true);
 
         final ItemStack it = e.getCurrentItem();
         if (it == null || it.getType().isAir() || !it.hasItemMeta()) {

@@ -15,8 +15,29 @@ import java.util.logging.Level;
 
 public abstract class AbstractConfig {
 
-    @Getter
-    private static final String path = "./plugins/MCPets/";
+    public static String getPath() {
+        return MCPets.getInstance().getDataFolder().getPath() + File.separator;
+    }
+
+    /** Copy legacy data once; leave the original directory intact. */
+    public static void migrateLegacyData() {
+        final java.nio.file.Path target = MCPets.getInstance().getDataFolder().toPath();
+        final java.nio.file.Path legacy = target.resolveSibling("MCPets");
+        if (java.nio.file.Files.exists(target) || !java.nio.file.Files.isDirectory(legacy)) return;
+        try (var paths = java.nio.file.Files.walk(legacy)) {
+            for (var source : paths.toList()) {
+                var destination = target.resolve(legacy.relativize(source));
+                if (java.nio.file.Files.isDirectory(source)) java.nio.file.Files.createDirectories(destination);
+                else java.nio.file.Files.copy(source, destination);
+            }
+            MCPets.getLog().info("已复制 MCPets 旧数据至 LiuPets，原目录保留作为备份。");
+        } catch (IOException ex) {
+            // A failed migration must not take the whole server down: keep the legacy
+            // directory untouched and continue with a fresh data folder.
+            MCPets.getLog().log(java.util.logging.Level.SEVERE,
+                    "旧宠物数据迁移失败，已继续启动；请手动把 plugins/MCPets 复制到 plugins/LiuPets", ex);
+        }
+    }
 
     @Getter
     @Setter
@@ -33,7 +54,7 @@ public abstract class AbstractConfig {
         this.fileName = fileName;
         this.folderName = folderName;
 
-        final File folder = new File(path + folderName);
+        final File folder = new File(getPath() + folderName);
         if (!folder.exists())
             folder.mkdirs();
 
@@ -51,7 +72,7 @@ public abstract class AbstractConfig {
     }
 
     public String getFullPath() {
-        return (path + folderName + "/" + fileName).replace("//", "/");
+        return (getPath() + folderName + "/" + fileName).replace("//", "/");
     }
 
     public void save() {
@@ -71,6 +92,18 @@ public abstract class AbstractConfig {
     public void loadConfig() {
         final File file = new File(getFullPath());
         config = YamlConfiguration.loadConfiguration(file);
+
+        // A non-empty file that parses to no keys is almost always corrupted YAML.
+        // Keep a backup before init()/save() regenerates defaults on top of it.
+        if (file.length() > 0 && config.getKeys(false).isEmpty()) {
+            final File backup = new File(file.getPath() + ".broken-" + System.currentTimeMillis());
+            try {
+                java.nio.file.Files.copy(file.toPath(), backup.toPath());
+                MCPets.getLog().severe("配置文件无法解析，已备份为 " + backup.getName() + " 并重新生成默认值：" + file.getName());
+            } catch (IOException ex) {
+                MCPets.getLog().log(java.util.logging.Level.SEVERE, "无法备份损坏的配置文件 " + file.getName(), ex);
+            }
+        }
     }
 
     protected void reorderKeys(String... keyOrder) {

@@ -1,0 +1,11 @@
+# 战令中配置 CUSTOM 类型任务，任务 ID 与下面的值一致即可。
+# 留空关闭该事件进度；不提供重复召唤刷任务。
+liupass:
+  enabled: true
+  pass-id: "" # 留空使用玩家默认战令
+  tasks:
+    feed: ""
+    tame: ""
+    level-up: ""
+mcskills:
+  protect-pets: true # 阻止玩家技能伤害宠物；mcSkills 目标过滤读取同一开关

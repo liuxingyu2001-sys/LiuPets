@@ -285,13 +285,22 @@ public class PetFood {
                     return false;
                 }
 
+                if (unlockedPetObject.getPermission() == null || unlockedPetObject.getPermission().isBlank()) {
+                    Language.PETUNLOCK_NO_PERMISSION_CONFIGURED.sendMessage(p);
+                    return false;
+                }
+
                 if (p.hasPermission(unlockedPetObject.getPermission())) {
                     Debugger.send("§7The player §c" + p.getName() + "§7 tried to unlock a pet using an unlock item but they already own the pet.");
                     Language.PETUNLOCKED_ALREADY.sendMessageFormatted(p, new FormatArg("%petName%", unlockedPetObject.getIcon().getItemMeta().getDisplayName()));
                     return false;
                 }
 
-                Utils.givePermission(p.getUniqueId(), unlockedPetObject.getPermission());
+                if (!Utils.givePermission(p.getUniqueId(), unlockedPetObject.getPermission())) {
+                    // Without LuckPerms the attachment is temporary, so do not consume the item.
+                    Language.PETUNLOCK_NO_LUCKPERMS.sendMessage(p);
+                    return false;
+                }
                 Language.PETUNLOCKED.sendMessageFormatted(p, new FormatArg("%petName%", unlockedPetObject.getIcon().getItemMeta().getDisplayName()));
                 triggered = true;
             }
@@ -337,7 +346,8 @@ public class PetFood {
         PetFood resultFood = null;
         for (PetFood petFoods : PetFoodConfig.getInstance().list()) {
 
-            if (petFoods == null || petFoods.getItemStack() == null || petFoods.getItemStack().getItemMeta() == null) {
+            if (petFoods == null || petFoods.getType() == null
+                    || petFoods.getItemStack() == null || petFoods.getItemStack().getItemMeta() == null) {
                 continue;
             }
 

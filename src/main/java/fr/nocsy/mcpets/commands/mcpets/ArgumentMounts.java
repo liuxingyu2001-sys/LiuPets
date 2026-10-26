@@ -23,8 +23,13 @@ public class ArgumentMounts extends AArgument {
 
     @Override
     public void commandEffect() {
-        if (sender instanceof Player) {
-            CategoriesMenu.openFiltered((Player) sender, CategoryType.MOUNT);
+        if (!(sender instanceof Player player)) return;
+
+        if (fr.nocsy.mcpets.data.Category.getCategories(CategoryType.MOUNT).isEmpty()) {
+            // No mount category configured: still show the flat mount list instead of an empty GUI.
+            new fr.nocsy.mcpets.data.inventories.MountMenu(player, 0).open(player);
+            return;
         }
+        CategoriesMenu.openFiltered(player, CategoryType.MOUNT);
     }
 }

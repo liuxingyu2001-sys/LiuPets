@@ -31,12 +31,7 @@ public class MySQLDB {
 
     public boolean init() {
         if (this.user == null || this.pass == null || this.ip == null || this.port == null || this.db == null) {
-            MCPets.getInstance().getLogger().severe("Missing SQL parameter.");
-            MCPets.getInstance().getLogger().severe("User : " + user);
-            MCPets.getInstance().getLogger().severe("Pass : " + pass);
-            MCPets.getInstance().getLogger().severe("Host : " + ip);
-            MCPets.getInstance().getLogger().severe("Port : " + port);
-            MCPets.getInstance().getLogger().severe("DB : " + db);
+            MCPets.getInstance().getLogger().severe("Missing SQL parameter. Check MySQL.User/Password/Host/Port/Database in config.yml.");
             return false;
         }
         try {
@@ -52,10 +47,10 @@ public class MySQLDB {
     }
 
     public void close() {
-        if (!GlobalConfig.getInstance().isDatabaseSupport())
-            return;
+        if (this.sqlCon == null) return;
         try {
-            this.sqlCon.close();
+            if (!this.sqlCon.isClosed())
+                this.sqlCon.close();
         }
         catch (Exception e) {
             MCPets.getInstance().getLogger().log(Level.SEVERE, "Failed to close SQL connection", e);
@@ -68,14 +63,18 @@ public class MySQLDB {
 
     private void ensureConnection() throws SQLException {
         long now = System.currentTimeMillis();
-        if (now - lastValidationTime < VALIDATION_INTERVAL_MS) {
+        if (now - lastValidationTime < VALIDATION_INTERVAL_MS && this.sqlCon != null) {
             return;
         }
-        if (!this.sqlCon.isValid(1)) {
-            this.sqlCon.close();
+        if (this.sqlCon == null || !this.sqlCon.isValid(1)) {
+            if (this.sqlCon != null) this.sqlCon.close();
             this.init();
         }
         lastValidationTime = now;
+    }
+
+    private boolean isUsable() {
+        return GlobalConfig.getInstance().isDatabaseSupport() && this.sqlCon != null;
     }
 
     public ResultSet query(String s) {
@@ -86,6 +85,8 @@ public class MySQLDB {
         } catch (SQLException e1) {
             MCPets.getInstance().getLogger().log(Level.SEVERE, "Failed to validate SQL connection", e1);
         }
+        if (!isUsable())
+            return null;
         ResultSet set = null;
         try {
             Statement stat = this.sqlCon.createStatement();
@@ -111,6 +112,8 @@ public class MySQLDB {
         } catch (SQLException e1) {
             MCPets.getInstance().getLogger().log(Level.SEVERE, "Failed to validate SQL connection", e1);
         }
+        if (!isUsable())
+            return null;
         ResultSet set = null;
         try {
             PreparedStatement pstmt = this.sqlCon.prepareStatement(sql);
@@ -131,9 +134,9 @@ public class MySQLDB {
     }
 
     private void closeStat(final Statement stat) {
-        if (!GlobalConfig.getInstance().isDatabaseSupport())
-            return;
-
+        // SELECT result sets are consumed by the caller after this method returns.
+        // Give generous headroom (5s) before closing the statement on the main thread,
+        // otherwise a large player-data load can hit "statement closed" mid-iteration.
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -143,7 +146,7 @@ public class MySQLDB {
                     MCPets.getInstance().getLogger().log(Level.SEVERE, "Failed to close SQL statement", e);
                 }
             }
-        }.runTaskLater(MCPets.getInstance(), 5L);
+        }.runTaskLater(MCPets.getInstance(), 100L);
 
     }
 }

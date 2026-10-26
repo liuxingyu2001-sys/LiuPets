@@ -60,6 +60,15 @@ public class Databases {
             MCPets.getInstance().getLogger().info("MySQL is disabled. Flat support will be used.");
             return false;
         }
+        // /liupets reload re-runs init: never leak the previous pool
+        if (mySQL != null) {
+            try {
+                mySQL.close();
+            } catch (RuntimeException ignored) {
+                // Pool already closed
+            }
+            mySQL = null;
+        }
         Databases.setMySQL(new MySQLDB(GlobalConfig.getInstance().getMySQL_USER(),
                 GlobalConfig.getInstance().getMySQL_PASSWORD(),
                 GlobalConfig.getInstance().getMySQL_HOST(),
@@ -111,20 +120,32 @@ public class Databases {
         try {
             while (playerData.next()) {
                 String uuidStr = playerData.getString("uuid");
-                UUID uuid = UUID.fromString(uuidStr);
+                UUID uuid;
+                try {
+                    uuid = UUID.fromString(uuidStr);
+                } catch (RuntimeException ex) {
+                    MCPets.getInstance().getLogger().warning("[Database] Skipping invalid uuid row: " + uuidStr);
+                    continue;
+                }
 
                 synchronized (getLockForPlayer(uuid)) {
-                    PlayerData pd = PlayerData.getEmpty(uuid);
+                    // Reuse the instance a concurrent join may already hold instead of
+                    // swapping a fresh empty PlayerData under it.
+                    PlayerData pd = PlayerData.getRegisteredData().get(uuid);
+                    if (pd == null) pd = PlayerData.getEmpty(uuid);
 
                     // Unserialize the pet stats first, coz it influences the inventories
                     PetStats.remove(uuid);
 
-                    for (String seria : playerData.getString("data").split(";;;")) {
-                        PetStats stats = PetStats.unserialize(seria);
-                        if (stats == null)
-                            continue;
-                        stats.launchTimers();
-                        PetStats.register(stats);
+                    final String statsData = playerData.getString("data");
+                    if (statsData != null && !statsData.isBlank()) {
+                        for (String seria : statsData.split(";;;")) {
+                            PetStats stats = PetStats.unserialize(seria);
+                            if (stats == null)
+                                continue;
+                            stats.launchTimers();
+                            PetStats.register(stats);
+                        }
                     }
 
                     // Unserialize the pet names; strip any legacy __active__ key silently
@@ -132,12 +153,11 @@ public class Databases {
                     names.remove("__active__");
                     pd.setMapOfRegisteredNames(names);
 
-                    // Unserialize the pet inventories
+                    // Unserialize the pet inventories.
+                    // Keep the serialized form only: creating Bukkit inventories here would
+                    // touch the Bukkit API from the DB async thread. PetInventory#get
+                    // materializes them lazily on the main thread when a menu is opened.
                     pd.setMapOfRegisteredInventories(unserializeData(playerData, "inventories"));
-                    for (String petId : pd.getMapOfRegisteredInventories().keySet()) {
-                        String seriaInv = pd.getMapOfRegisteredInventories().get(petId);
-                        PetInventory.unserialize(petId + ";" + seriaInv, pd.getUuid());
-                    }
 
                     try {
                         pd.setLastActivePet(playerData.getString("lastActivePet"));
@@ -145,6 +165,7 @@ public class Databases {
                         // Column might not exist yet
                     }
                     PlayerData.getRegisteredData().put(uuid, pd);
+                    pd.setLoaded(true);
                 }
             }
         }
@@ -173,20 +194,32 @@ public class Databases {
         try {
             while (playerData.next()) {
                 String uuidStr = playerData.getString("uuid");
-                UUID uuid = UUID.fromString(uuidStr);
+                UUID uuid;
+                try {
+                    uuid = UUID.fromString(uuidStr);
+                } catch (RuntimeException ex) {
+                    MCPets.getInstance().getLogger().warning("[Database] Skipping invalid uuid row: " + uuidStr);
+                    continue;
+                }
 
                 synchronized (getLockForPlayer(uuid)) {
-                    PlayerData pd = PlayerData.getEmpty(uuid);
+                    // Reuse the instance a concurrent join may already hold instead of
+                    // swapping a fresh empty PlayerData under it.
+                    PlayerData pd = PlayerData.getRegisteredData().get(uuid);
+                    if (pd == null) pd = PlayerData.getEmpty(uuid);
 
                     // Unserialize the pet stats first, coz it influences the inventories
                     PetStats.remove(uuid);
 
-                    for (String seria : playerData.getString("data").split(";;;")) {
-                        PetStats stats = PetStats.unserialize(seria);
-                        if (stats == null)
-                            continue;
-                        stats.launchTimers();
-                        PetStats.register(stats);
+                    final String statsData = playerData.getString("data");
+                    if (statsData != null && !statsData.isBlank()) {
+                        for (String seria : statsData.split(";;;")) {
+                            PetStats stats = PetStats.unserialize(seria);
+                            if (stats == null)
+                                continue;
+                            stats.launchTimers();
+                            PetStats.register(stats);
+                        }
                     }
 
                     // Unserialize the pet names; strip any legacy __active__ key silently
@@ -194,12 +227,11 @@ public class Databases {
                     names.remove("__active__");
                     pd.setMapOfRegisteredNames(names);
 
-                    // Unserialize the pet inventories
+                    // Unserialize the pet inventories.
+                    // Keep the serialized form only: creating Bukkit inventories here would
+                    // touch the Bukkit API from the DB async thread. PetInventory#get
+                    // materializes them lazily on the main thread when a menu is opened.
                     pd.setMapOfRegisteredInventories(unserializeData(playerData, "inventories"));
-                    for (String petId : pd.getMapOfRegisteredInventories().keySet()) {
-                        String seriaInv = pd.getMapOfRegisteredInventories().get(petId);
-                        PetInventory.unserialize(petId + ";" + seriaInv, pd.getUuid());
-                    }
 
                     try {
                         pd.setLastActivePet(playerData.getString("lastActivePet"));
@@ -207,6 +239,7 @@ public class Databases {
                         // Column might not exist yet
                     }
                     PlayerData.getRegisteredData().put(uuid, pd);
+                    pd.setLoaded(true);
                 }
             }
         }
@@ -214,35 +247,24 @@ public class Databases {
             MCPets.getInstance().getLogger().log(Level.SEVERE, "Failed to load player data for " + playerUUID, e1);
             return false;
         }
+
+        // No row yet (new player) or row loaded above: the cache is now authoritative.
+        final PlayerData cached = PlayerData.getRegisteredData().get(playerUUID);
+        if (cached != null) cached.setLoaded(true);
+        else PlayerData.get(playerUUID).setLoaded(true);
         return true;
     }
 
     public static void saveData() {
         if (!GlobalConfig.getInstance().isDatabaseSupport())
             return;
+        if (getMySQL() == null)
+            return;
 
-        getMySQL().query("TRUNCATE " + table);
-
-        for (UUID uuid : PlayerData.getRegisteredData().keySet()) {
-            synchronized (getLockForPlayer(uuid)) {
-                PlayerData pd = PlayerData.getRegisteredData().get(uuid);
-
-                String names = buildStringSerialized(pd.getMapOfRegisteredNames());
-                String inventories = buildStringSerialized(pd.getMapOfRegisteredInventories());
-                String lastActivePet = pd.getLastActivePet();
-                if (lastActivePet == null) lastActivePet = "";
-
-                StringBuilder data = new StringBuilder();
-
-                for (PetStats stats : PetStats.getPetStats(uuid)) {
-                    data.append(stats.serialize()).append(";;;");
-                }
-                if (data.length() > 0)
-                    data = new StringBuilder(data.substring(0, data.length() - 3));
-
-                getMySQL().preparedQuery("INSERT INTO " + table + " (uuid, names, inventories, data, lastActivePet) VALUES (?, ?, ?, ?, ?)",
-                        uuid.toString(), names, inventories, data.toString(), lastActivePet);
-            }
+        // Per-player upsert instead of TRUNCATE + mass insert: a failure halfway
+        // through no longer wipes every stored player row.
+        for (UUID uuid : new ArrayList<>(PlayerData.getRegisteredData().keySet())) {
+            savePlayerData(uuid);
         }
     }
 
@@ -254,6 +276,9 @@ public class Databases {
 
         synchronized (getLockForPlayer(playerUUID)) {
             PlayerData pd = PlayerData.getRegisteredData().get(playerUUID);
+            if (pd == null) return;
+            // Never overwrite a row we have not read yet (join during DB init).
+            if (!pd.isLoaded()) return;
 
             String names = buildStringSerialized(pd.getMapOfRegisteredNames());
             String inventories = buildStringSerialized(pd.getMapOfRegisteredInventories());
@@ -346,7 +371,7 @@ public class Databases {
     }
 
     public static void closeConnection() {
-        if (!GlobalConfig.getInstance().isDatabaseSupport())
+        if (mySQL == null)
             return;
 
         mySQL.close();
@@ -368,6 +393,8 @@ public class Databases {
     public static ConcurrentHashMap<String, String> unserializeData(ResultSet resultSet, String targetedColumn) throws SQLException {
         String targetedResults = resultSet.getString(targetedColumn);
         ConcurrentHashMap<String, String> outputMap = new ConcurrentHashMap<>();
+        if (targetedResults == null || targetedResults.isBlank())
+            return outputMap;
 
         String[] seriaTable = targetedResults.split(";;;");
 

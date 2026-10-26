@@ -13,16 +13,14 @@ import fr.nocsy.mcpets.data.CategoryType;
 import fr.nocsy.mcpets.data.config.GlobalConfig;
 import fr.nocsy.mcpets.utils.MenuPaginationHelper;
 import fr.nocsy.mcpets.data.inventories.CategoriesMenu;
+import fr.nocsy.mcpets.data.inventories.MountInteractionMenu;
+import fr.nocsy.mcpets.data.inventories.PetInteractionMenu;
 import fr.nocsy.mcpets.data.inventories.PetInventoryHolder;
 
 public class CategoryMenuListener implements Listener {
 
     @EventHandler
     public void click(final InventoryClickEvent e) {
-        if (Category.getCategories().isEmpty()) {
-            return;
-        }
-
         if (!(e.getWhoClicked() instanceof final Player p)) {
             return;
         }
@@ -68,6 +66,17 @@ public class CategoryMenuListener implements Listener {
 
         final Pet petObject = Pet.getFromIcon(it);
         if (petObject != null) {
+            // Already summoned: open its interaction menu instead of silently
+            // returning BLOCKED (same behaviour as the flat pet menu).
+            final Pet active = Pet.getActivePetsForOwner(p.getUniqueId()).stream()
+                    .filter(pet -> pet.getId().equals(petObject.getId())).findFirst().orElse(null);
+            if (active != null) {
+                Category.unregisterPlayerView(p);
+                active.setLastInteractedWith(p);
+                if (active.isMount()) new MountInteractionMenu(active, p.getUniqueId()).open(p);
+                else new PetInteractionMenu(active, p.getUniqueId()).open(p);
+                return;
+            }
             p.closeInventory();
             final Pet pet = petObject.copy();
             pet.spawnWithMessage(p);

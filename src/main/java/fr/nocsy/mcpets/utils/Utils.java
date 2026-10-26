@@ -307,6 +307,8 @@ public class Utils {
      * Return false if we are unable to give the permission on a long term basis
      */
     public static boolean givePermission(final UUID uuid, final String permission) {
+        if (permission == null || permission.isBlank())
+            return false;
         if (MCPets.getLuckPerms() != null) {
             return PermsUtils.givePermission(uuid, permission);
         }
@@ -324,6 +326,8 @@ public class Utils {
      * Remove permission to the player
      */
     public static boolean removePermission(final UUID uuid, final String permission) {
+        if (permission == null || permission.isBlank())
+            return false;
         if (MCPets.getLuckPerms() != null) {
             PermsUtils.removePermission(uuid, permission);
             return true;
@@ -336,6 +340,8 @@ public class Utils {
      * Give permission async, returning a future that completes once LuckPerms has applied the change.
      */
     public static CompletableFuture<Void> givePermissionAsync(final UUID uuid, final String permission) {
+        if (permission == null || permission.isBlank())
+            return CompletableFuture.completedFuture(null);
         return PermsUtils.givePermissionAsync(uuid, permission);
     }
 
@@ -343,6 +349,8 @@ public class Utils {
      * Remove permission async, returning a future that completes once LuckPerms has applied the change.
      */
     public static CompletableFuture<Void> removePermissionAsync(final UUID uuid, final String permission) {
+        if (permission == null || permission.isBlank())
+            return CompletableFuture.completedFuture(null);
         return PermsUtils.removePermissionAsync(uuid, permission);
     }
 
@@ -350,6 +358,8 @@ public class Utils {
      * Check if the player has the permission
      */
     public static boolean hasPermission(@NotNull final UUID uuid, final String permission) {
+        if (permission == null || permission.isBlank())
+            return false;
         boolean hasPerm = false;
         final Player p = Bukkit.getPlayer(uuid);
         if (p != null) {

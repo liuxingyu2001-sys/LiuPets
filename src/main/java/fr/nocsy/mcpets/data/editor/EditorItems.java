@@ -200,7 +200,7 @@ public enum EditorItems {
         this.id = this.name().toUpperCase();
         this.item = item;
         this.inputFilePath = filePath;
-        this.filePath = "./plugins/MCPets/" + filePath + ".yml";
+        this.filePath = fr.nocsy.mcpets.data.config.AbstractConfig.getPath() + filePath + ".yml";
         this.variablePath = variablePath;
         this.variablePathPlaceholder = "";
         this.type = type;

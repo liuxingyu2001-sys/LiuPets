@@ -3,6 +3,7 @@ package fr.nocsy.mcpets.data.livingpets;
 import java.util.List;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import lombok.Getter;
@@ -89,6 +90,9 @@ public class PetStats {
      * used to refresh data that is changed by the level
      */
     private void updateChangingData() {
+        // Drop old timer tasks before replacing the objects: otherwise an old
+        // respawn task can fire later and spawn a stale pet copy.
+        stopTimers();
         refreshMaxHealth();
         updateHealth();
         respawnTimer = new PetTimer(currentLevel.getRespawnCooldown(), 20, () -> {
@@ -353,7 +357,12 @@ public class PetStats {
     public static PetStats unserialize(String base64Str) {
         PetStatsSerializer serializer = PetStatsSerializer.unserialize(base64Str);
         if (serializer == null) return null;
-        return serializer.buildStats();
+        try {
+            return serializer.buildStats();
+        } catch (RuntimeException ex) {
+            MCPets.getLog().warning("Skipping invalid pet stats entry: " + ex.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -384,11 +393,13 @@ public class PetStats {
 
     //------------ Static code -------------//
 
-    private static List<PetStats> petStatsList = new ArrayList<>();
+    private static List<PetStats> petStatsList = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static org.bukkit.scheduler.BukkitTask autoSaveTask;
 
     public static List<PetStats> getPetStats(UUID owner) {
         return petStatsList.stream()
-                .filter(petStats -> petStats.getPet().getOwner().equals(owner))
+                .filter(petStats -> petStats.getPet() != null
+                        && Objects.equals(petStats.getPet().getOwner(), owner))
                 .collect(Collectors.toList());
     }
 
@@ -396,7 +407,13 @@ public class PetStats {
      * Remove the pet stats corresponding to the given pet id
      */
     public static void remove(String petId) {
-        petStatsList.removeIf(petStats -> petStats.getPet().getId().equals(petId));
+        petStatsList.removeIf(petStats -> {
+            if (petStats.getPet() != null && Objects.equals(petStats.getPet().getId(), petId)) {
+                petStats.stopTimers();
+                return true;
+            }
+            return false;
+        });
     }
 
 
@@ -404,16 +421,54 @@ public class PetStats {
      * Remove the pet stats corresponding to the given player
      */
     public static void remove(UUID owner) {
-        petStatsList.removeIf(stat -> stat.getPet().getOwner().equals(owner));
+        petStatsList.removeIf(stat -> {
+            if (stat.getPet() != null && Objects.equals(stat.getPet().getOwner(), owner)) {
+                stat.stopTimers();
+                return true;
+            }
+            return false;
+        });
     }
 
     /**
      * Remove the pet stats corresponding to the given pet and owner
      */
     public static void remove(String petId, UUID owner) {
-        petStatsList.removeIf(stat ->
-                stat.getPet().getOwner().equals(owner)
-                        && stat.getPet().getId().equals(petId));
+        petStatsList.removeIf(stat -> {
+            if (stat.getPet() != null
+                    && Objects.equals(stat.getPet().getOwner(), owner)
+                    && Objects.equals(stat.getPet().getId(), petId)) {
+                stat.stopTimers();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    /** Cancel every scheduler task owned by these stats. */
+    public void stopTimers() {
+        if (!Bukkit.isPrimaryThread()) {
+            // Bukkit scheduler access must happen on the main thread (DB loads call remove()).
+            Bukkit.getScheduler().runTask(MCPets.getInstance(), this::stopTimers);
+            return;
+        }
+        if (respawnTimer != null) respawnTimer.stop(null);
+        if (revokeTimer != null) revokeTimer.stop(null);
+        if (regenerationTimer != null) regenerationTimer.stop(null);
+    }
+
+    /**
+     * Drop every cached stats entry (plugin disable / reload).
+     */
+    public static void clearAll() {
+        if (autoSaveTask != null) {
+            autoSaveTask.cancel();
+            autoSaveTask = null;
+        }
+        for (PetStats stats : petStatsList) {
+            stats.stopTimers();
+        }
+        petStatsList.clear();
     }
 
     /**
@@ -432,6 +487,12 @@ public class PetStats {
      * Save all pet stats asynchronously on a regular time period
      */
     public static void saveStats() {
+        // Never stack autosave tasks on repeated /liupets reload
+        if (autoSaveTask != null) {
+            autoSaveTask.cancel();
+            autoSaveTask = null;
+        }
+
         // Get the auto save delay (in seconds) and transform it into ticks
         long delay = (long) GlobalConfig.getInstance().getAutoSave() * 20;
 
@@ -441,7 +502,7 @@ public class PetStats {
         // Runs Async if it's a SQL, sync if not coz YAML doesn't support Async
         if (GlobalConfig.getInstance().isDatabaseSupport()) {
             // TODO: For now, we make the AutoSave only saving the connected players for MySQL users
-            Bukkit.getScheduler().runTaskTimerAsynchronously(MCPets.getInstance(), () -> {
+            autoSaveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(MCPets.getInstance(), () -> {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     Databases.savePlayerData(p.getUniqueId());
                 }
@@ -449,7 +510,7 @@ public class PetStats {
             return;
         }
 
-        Bukkit.getScheduler().runTaskTimer(MCPets.getInstance(), () ->
+        autoSaveTask = Bukkit.getScheduler().runTaskTimer(MCPets.getInstance(), () ->
                 new ArrayList<>(petStatsList).forEach(PetStats::save), delay, delay);
     }
 
@@ -460,8 +521,9 @@ public class PetStats {
      */
     public static PetStats get(String petId, UUID owner) {
         return petStatsList.stream()
-                .filter(stat -> stat.getPet().getId().equals(petId) &&
-                        stat.getPet().getOwner().equals(owner))
+                .filter(stat -> stat.getPet() != null
+                        && Objects.equals(stat.getPet().getId(), petId)
+                        && Objects.equals(stat.getPet().getOwner(), owner))
                 .findFirst().orElse(null);
     }
 
@@ -491,7 +553,8 @@ public class PetStats {
      */
     public static PetStats getPetStatsOnRespawnTimerRunning(UUID uuid) {
         return petStatsList.stream().filter(petStats ->
-                petStats.getPet().getOwner().equals(uuid)
+                petStats.getPet() != null
+                        && Objects.equals(petStats.getPet().getOwner(), uuid)
                         && petStats.isRespawnTimerRunning()).findFirst().orElse(null);
     }
 

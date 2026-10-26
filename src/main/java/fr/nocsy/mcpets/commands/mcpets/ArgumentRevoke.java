@@ -29,7 +29,11 @@ public class ArgumentRevoke extends AArgument {
 
             PetInteractionMenuListener.revoke(p, pet);
         }
-        else if (args.length == 2 && sender.hasPermission(PPermission.ADMIN.getPermission())) {
+        else if (args.length == 2) {
+            if (!sender.hasPermission(PPermission.ADMIN.getPermission())) {
+                Language.NO_PERM.sendMessage(sender);
+                return;
+            }
 
             String playerName = args[1];
             Player p = Bukkit.getPlayer(playerName);
@@ -40,6 +44,7 @@ public class ArgumentRevoke extends AArgument {
 
             Pet pet = Pet.fromOwner(p.getUniqueId());
             if (pet == null) {
+                Language.NO_ACTIVE_PET.sendMessage(p);
                 return;
             }
 

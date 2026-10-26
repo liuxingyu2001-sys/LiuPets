@@ -6,6 +6,7 @@ import fr.nocsy.mcpets.commands.AArgument;
 import fr.nocsy.mcpets.data.Pet;
 import fr.nocsy.mcpets.data.config.FormatArg;
 import fr.nocsy.mcpets.data.config.Language;
+import fr.nocsy.mcpets.data.livingpets.PetStats;
 import fr.nocsy.mcpets.data.sql.PlayerData;
 import org.bukkit.command.CommandSender;
 
@@ -23,8 +24,15 @@ public class ArgumentReload extends AArgument {
     @Override
     public void commandEffect() {
         PlayerData.saveDB();
+
+        // Active pets reference the old Pet/PetStats objects. Reloading configs replaces
+        // the object pool, so despawn them first instead of leaving stale instances alive.
+        Pet.clearPets();
+        PetStats.clearAll();
+
         MCPets.loadConfigs();
         Language.RELOAD_SUCCESS.sendMessage(sender);
-        Language.HOW_MANY_PETS_LOADED.sendMessageFormatted(sender, new FormatArg("%numberofpets%", Integer.toString(Pet.getObjectPets().size())));
+        Language.HOW_MANY_PETS_LOADED.sendMessageFormatted(sender,
+                new FormatArg("%numberofpets%", Integer.toString(Pet.getObjectPets().size())));
     }
 }

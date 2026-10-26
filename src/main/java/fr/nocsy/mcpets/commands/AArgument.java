@@ -46,6 +46,7 @@ public abstract class AArgument {
         this.args = args;
         this.validArgsLength = validArgsLength;
         this.argumentName = argumentName;
-        this.usage = usage;
+        // Keep every usage line on the fork's command name.
+        this.usage = usage == null ? null : usage.replace("/mcpets", "/liupets");
     }
 }

@@ -72,7 +72,7 @@ public class PetSkin {
             String tagVal = PDCTag.get(it.getItemMeta());
             if (tagVal == null) return null;
             String[] code = tagVal.split(";");
-            if (code.length > 0 && code[0].equals("MCPetsSkins")) {
+            if (code.length >= 3 && code[0].equals("MCPetsSkins")) {
                 String petId = code[1];
                 String skinUuid = code[2];
                 ArrayList<PetSkin> skins = petSkins.get(petId);
@@ -106,6 +106,8 @@ public class PetSkin {
             return false;
 
         skins = skins.stream().filter(petSkin -> p.hasPermission(petSkin.getPermission())).toList();
+        if (skins.isEmpty())
+            return false;
 
         int invSize = Math.min(skins.size(), 54);
         while (invSize <= 0 || invSize % 9 != 0)
@@ -143,8 +145,10 @@ public class PetSkin {
      * Clear previous entries
      */
     public static void clearList(Pet pet) {
-        if (pet.hasSkins()) {
-            petSkins.put(pet.getId(), new ArrayList<>());
+        if (pet != null) {
+            // Always drop the old list: on reload the fresh Pet has no cached skins yet,
+            // so a hasSkins() check would leave duplicates accumulating on every reload.
+            petSkins.remove(pet.getId());
         }
     }
 

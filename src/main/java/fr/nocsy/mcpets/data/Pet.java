@@ -70,11 +70,11 @@ public class Pet {
     //********** Static values **********
 
     @Getter
-    private static Map<UUID, List<Pet>> activePets = new HashMap<>();
+    private static Map<UUID, List<Pet>> activePets = new java.util.concurrent.ConcurrentHashMap<>();
     @Getter
     private static List<Pet> objectPets = new ArrayList<>();
     @Getter
-    private static Map<UUID, HashMap<String, PetSkin>> activeSkinsMap = new HashMap<>();
+    private static Map<UUID, Map<String, PetSkin>> activeSkinsMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     // Prevent race conditions during spawn
     private static Set<String> spawningPets = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -219,6 +219,8 @@ public class Pet {
     // Debug variables
     @Setter
     private boolean recurrent_spawn = false;
+    /** Guards the "MythicMob not registered yet" retry against an endless spawn/remove loop. */
+    private int spawnRetries = 0;
 
     // AI variable
     private int task = 0;
@@ -240,12 +242,9 @@ public class Pet {
      */
     public void setActiveSkin(final PetSkin skin) {
         if (owner != null) {
-            HashMap<String, PetSkin> ownerPetSkins = activeSkinsMap.get(owner);
-            if (ownerPetSkins == null)
-                ownerPetSkins = new HashMap<String, PetSkin>();
-
+            final Map<String, PetSkin> ownerPetSkins =
+                    activeSkinsMap.computeIfAbsent(owner, k -> new java.util.concurrent.ConcurrentHashMap<>());
             ownerPetSkins.put(id, skin);
-            activeSkinsMap.put(owner, ownerPetSkins);
         }
     }
 
@@ -254,7 +253,7 @@ public class Pet {
      */
     public PetSkin getActiveSkin() {
         if (owner != null) {
-            final HashMap<String, PetSkin> ownerPetSkins = activeSkinsMap.get(owner);
+            final Map<String, PetSkin> ownerPetSkins = activeSkinsMap.get(owner);
             if (ownerPetSkins != null) {
                 return ownerPetSkins.get(id);
             }
@@ -358,28 +357,35 @@ public class Pet {
      */
     @Deprecated
     public static Pet fromOwner(final UUID owner) {
+        if (owner == null) return null;
         final List<Pet> pets = Pet.getActivePets().get(owner);
         return (pets != null && !pets.isEmpty()) ? pets.getFirst() : null;
     }
 
     /**
-     * Get all active pets for a player
+     * Get all active pets for a player.
+     * Returns a snapshot copy so callers can safely despawn pets while iterating,
+     * and so async DB saves never observe a concurrently modified list.
      */
     public static List<Pet> getActivePetsForOwner(final UUID owner) {
-        return Pet.getActivePets().getOrDefault(owner, new ArrayList<>());
+        if (owner == null) return new ArrayList<>();
+        final List<Pet> pets = Pet.getActivePets().get(owner);
+        return pets == null ? new ArrayList<>() : new ArrayList<>(pets);
     }
 
     /**
      * Add a pet to a player's active pets list
      */
     public static void addActivePet(final UUID owner, final Pet pet) {
-        activePets.computeIfAbsent(owner, k -> new ArrayList<>()).add(pet);
+        if (owner == null || pet == null) return;
+        activePets.computeIfAbsent(owner, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(pet);
     }
 
     /**
      * Remove a pet from a player's active pets list
      */
     public static void removeActivePet(final UUID owner, final Pet pet) {
+        if (owner == null || pet == null) return;
         final List<Pet> pets = activePets.get(owner);
         if (pets != null) {
             pets.remove(pet);
@@ -450,17 +456,16 @@ public class Pet {
         final ArrayList<Pet> pets = new ArrayList<>();
 
         for (final Pet pet : objectPets) {
-            if (pet.isCheckPermission()) {
-                if (p.hasPermission(pet.getPermission())) {
-                    final Pet updatedPet = pet.copy();
-                    updatedPet.setOwner(p.getUniqueId());
-                    updatedPet.setPetStats();
+            // Never expose the shared template object: every entry gets the owner set
+            // so stats/placeholders are rendered for this player.
+            if (pet.isCheckPermission() && !p.hasPermission(pet.getPermission()))
+                continue;
 
-                    pets.add(updatedPet);
-                }
-            } else {
-                pets.add(pet);
-            }
+            final Pet updatedPet = pet.copy();
+            updatedPet.setOwner(p.getUniqueId());
+            updatedPet.setCheckPermission(pet.isCheckPermission());
+            updatedPet.setPetStats();
+            pets.add(updatedPet);
         }
         return pets;
     }
@@ -476,6 +481,18 @@ public class Pet {
         for (final Pet pet : allPets) {
             pet.despawn(PetDespawnReason.RELOAD);
         }
+        clearStaticState();
+    }
+
+    /**
+     * Drop every static reference held by the pet layer.
+     * Used on disable so a PlugMan reload never sees stale templates, skins or spawn locks.
+     */
+    public static void clearStaticState() {
+        Pet.getActivePets().clear();
+        activeSkinsMap.clear();
+        spawningPets.clear();
+        objectPets.clear();
     }
 
     /**
@@ -548,7 +565,7 @@ public class Pet {
     /**
      * Set up the pet stats if possible
      */
-    private void setPetStats() {
+    public void setPetStats() {
         // We do not set up pet stats if :
         // - The pet already has stats
         // - The pet has no registered levels (it's not a living pet then)
@@ -595,6 +612,10 @@ public class Pet {
                     Debugger.send("§c  -> External listener: §6" + rl.getPlugin().getName() + "§c (priority: " + rl.getPriority() + ")");
                 }
             }
+            // Show an explicit message: otherwise a cancelled spawn looked like a dead click.
+            final Player ownerPlayer = owner != null ? Bukkit.getPlayer(owner) : null;
+            if (ownerPlayer != null)
+                Language.SPAWN_CANCELLED.sendMessage(ownerPlayer);
             despawn(PetDespawnReason.CANCELLED);
             return BLOCKED;
         }
@@ -620,7 +641,7 @@ public class Pet {
         // If we should check the permission
         if (checkPermission && owner != null &&
                 Bukkit.getPlayer(owner) != null &&
-                !Bukkit.getPlayer(owner).hasPermission(permission)) {
+                !Utils.hasPermission(owner, permission)) {
             Debugger.send("§cUser is not allowed to spawn that pet.");
             despawn(PetDespawnReason.DONT_HAVE_PERM);
             return NOT_ALLOWED;
@@ -658,9 +679,12 @@ public class Pet {
             // This prevents race conditions when alternating between mounts and pets
 
             // Get the active skin (which is also a MythicMobs)
-            // Adapt the mythicMob to despawn depending on the skin
-            if (getActiveSkin() != null)
-                mythicMobName = getActiveSkin().getMythicMobId();
+            // Adapt the mythicMob to despawn depending on the skin.
+            // A skin whose MythicMob entry is missing must not blank the base mob id,
+            // otherwise the pet can never be summoned (silent MYTHIC_MOB_NULL).
+            final PetSkin activeSkin = getActiveSkin();
+            if (activeSkin != null && activeSkin.getMythicMobId() != null && !activeSkin.getMythicMobId().isBlank())
+                mythicMobName = activeSkin.getMythicMobId();
 
             // Any issue with the mythicmobs definition ?
             // Any issue with the owner definition ?
@@ -746,6 +770,12 @@ public class Pet {
                     Debugger.send("§cMythicMob was spawned but MCPets couldn't link it to an active mob. Trying again in 0.5s automatically...");
                     // We remove the entity coz that'll not be done by the despawn since the activeMob is null
                     ent.remove();
+                    if (spawnRetries++ >= 3) {
+                        spawnRetries = 0;
+                        Debugger.send("§cGiving up after 3 registration retries for " + mythicMobName + ".");
+                        despawn(PetDespawnReason.SPAWN_ISSUE);
+                        return MYTHIC_MOB_NULL;
+                    }
                     new BukkitRunnable() {
                         @Override
                         public void run() {
@@ -754,6 +784,7 @@ public class Pet {
                     }.runTaskLater(MCPets.getInstance(), 10L);
                     return MYTHIC_MOB_NULL;
                 }
+                spawnRetries = 0;
 
                 final boolean returnDespawned = changeActiveMobTo(activeMob, owner, true, PetDespawnReason.REPLACED);
 
@@ -803,32 +834,38 @@ public class Pet {
      * Spawn the pet and send the corresponding message on execution
      */
     public void spawnWithMessage(final Player p) {
+        spawnRetries = 0;
         final int executed = this.spawn(p, p.getLocation());
-        if (isStillHere())
-            switch (executed) {
-                case Pet.DESPAWNED_PREVIOUS:
-                    Language.REVOKED_FOR_NEW_ONE.sendMessage(p);
-                    break;
-                case Pet.MOB_SPAWN:
-                    Language.SUMMONED.sendMessage(p);
-                    break;
-                case Pet.MYTHIC_MOB_NULL:
-                    Language.MYTHICMOB_NULL.sendMessage(p);
-                    break;
-                case Pet.NO_MOB_MATCH:
-                    Language.NO_MOB_MATCH.sendMessage(p);
-                    break;
-                case Pet.NOT_ALLOWED:
-                    Language.NOT_ALLOWED.sendMessage(p);
-                    break;
-                case Pet.OWNER_NULL:
-                    Language.OWNER_NOT_FOUND.sendMessage(p);
-                    break;
-                case Pet.MAX_ACTIVE_PETS_REACHED:
-                    Language.MAX_ACTIVE_PETS_REACHED.sendMessageFormatted(p,
-                            new FormatArg("%max%", String.valueOf(GlobalConfig.getInstance().getMaxActivePets())));
-                    break;
-            }
+        // Report every failure code: the previous `isStillHere()` guard made all
+        // error messages unreachable, so a failed summon looked like "nothing happened".
+        switch (executed) {
+            case Pet.DESPAWNED_PREVIOUS:
+                Language.REVOKED_FOR_NEW_ONE.sendMessage(p);
+                break;
+            case Pet.MOB_SPAWN:
+                Language.SUMMONED.sendMessage(p);
+                break;
+            case Pet.MYTHIC_MOB_NULL:
+                Language.MYTHICMOB_NULL.sendMessage(p);
+                break;
+            case Pet.NO_MOB_MATCH:
+                Language.NO_MOB_MATCH.sendMessage(p);
+                break;
+            case Pet.NOT_ALLOWED:
+                Language.NOT_ALLOWED.sendMessage(p);
+                break;
+            case Pet.OWNER_NULL:
+                Language.OWNER_NOT_FOUND.sendMessage(p);
+                break;
+            case Pet.MAX_ACTIVE_PETS_REACHED:
+                Language.MAX_ACTIVE_PETS_REACHED.sendMessageFormatted(p,
+                        new FormatArg("%max%", String.valueOf(GlobalConfig.getInstance().getMaxActivePets())));
+                break;
+            default:
+                // BLOCKED covers spawn-event cancellation / duplicate summons, which are
+                // reported (or intentionally silent) at their origin already.
+                break;
+        }
     }
 
     /**
@@ -868,9 +905,10 @@ public class Pet {
         if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
             final PlayerData pd = PlayerData.get(owner);
             final PetSkin activeSkin = getActiveSkin();
+            // Persisted on quit / onDisable / periodic autosave instead of doing a
+            // synchronous DB write on the main thread for every single summon.
             pd.setLastActivePet(PlayerData.encodeActivePet(this.getId(),
                     activeSkin != null ? activeSkin.getPathId() : null));
-            pd.save();
         }
 
         // Check max active pets/mounts limit AFTER adding this pet to the list
@@ -1091,8 +1129,10 @@ public class Pet {
         if (owner != null) {
             final Player ownerPlayer = Bukkit.getPlayer(owner);
             if (ownerPlayer != null) {
-                if (reason.equals(PetDespawnReason.UNKNOWN) ||
-                        reason.equals(PetDespawnReason.SPAWN_ISSUE)) {
+                // Only UNKNOWN is a user-facing despawn. Spawn failures are reported by
+                // spawnWithMessage() with a precise per-code message, so echoing the generic
+                // REVOKED_UNKNOWN here would duplicate it.
+                if (reason.equals(PetDespawnReason.UNKNOWN)) {
                     Language.REVOKED_UNKNOWN.sendMessage(ownerPlayer);
                 }
                 if (enableSignalStickFromMenu)
@@ -1102,14 +1142,18 @@ public class Pet {
 
         if (activeMob != null) {
 
-            MCPets.getModeler().dismountAll(activeMob.getEntity().getUniqueId());
+            // The MythicMob entity can already be gone (death/despawn race); never let
+            // a null entity abort the cleanup, otherwise the pet stays active forever.
+            if (activeMob.getEntity() != null)
+                MCPets.getModeler().dismountAll(activeMob.getEntity().getUniqueId());
 
             // If it's not a death, we don't let the death animation happen
             if (reason != PetDespawnReason.DEATH) {
                 // Do we have a despawn skill to trigger or a skin swap?
                 final Skill despawnSkillMM = Utils.getSkill(despawnSkill);
                 if (despawnSkillMM != null
-                        && reason != PetDespawnReason.SKIN) {
+                        && reason != PetDespawnReason.SKIN
+                        && activeMob.getEntity() != null) {
                     try {
                         despawnSkillMM.execute(new SkillMetadataImpl(SkillTriggers.CUSTOM, activeMob, activeMob.getEntity()));
                     } catch (final Exception ex) {
@@ -1120,7 +1164,8 @@ public class Pet {
                         }
                     }
                 } else {
-                    MCPets.getModeler().removeModel(activeMob.getEntity().getUniqueId());
+                    if (activeMob.getEntity() != null)
+                        MCPets.getModeler().removeModel(activeMob.getEntity().getUniqueId());
                     activeMob.despawn();
                     activeMob.remove();
                     if (activeMob.getEntity() != null)
@@ -1139,7 +1184,6 @@ public class Pet {
                     final PlayerData pd = PlayerData.get(owner);
                     if (pd != null) {
                         pd.setLastActivePet("");
-                        pd.save();
                     }
                 }
             }
@@ -1155,7 +1199,6 @@ public class Pet {
                 final PlayerData pd = PlayerData.get(owner);
                 if (pd != null) {
                     pd.setLastActivePet("");
-                    pd.save();
                 }
             }
         }
@@ -1171,7 +1214,8 @@ public class Pet {
         if (!GlobalConfig.getInstance().isVelocityEnabled()
                 || !GlobalConfig.getInstance().isDatabaseSupport())
             return;
-        if (reason == PetDespawnReason.DISCONNECTION || reason == PetDespawnReason.TELEPORT)
+        if (reason == PetDespawnReason.DISCONNECTION || reason == PetDespawnReason.TELEPORT
+                || reason == PetDespawnReason.RELOAD)
             return;
         if (owner == null)
             return;
@@ -1357,6 +1401,8 @@ public class Pet {
         if (activeMob != null) pet.setActiveMob(activeMob);
         pet.setSignals(signals);
         pet.setEnableSignalStickFromMenu(enableSignalStickFromMenu);
+        pet.setCheckPermission(checkPermission);
+        pet.setUseDefaultMythicMobNames(useDefaultMythicMobNames);
         return pet;
     }
 
@@ -1458,7 +1504,13 @@ public class Pet {
 
         clearStickSignals(p, this.id);
 
-        if (!p.getInventory().contains(signalStick)) p.getInventory().addItem(signalStick);
+        if (!p.getInventory().contains(signalStick)) {
+            // Drop leftovers at the player's feet instead of silently deleting the stick
+            // when the inventory is full.
+            for (final ItemStack leftover : p.getInventory().addItem(signalStick).values()) {
+                p.getWorld().dropItemNaturally(p.getLocation(), leftover);
+            }
+        }
     }
 
     /**

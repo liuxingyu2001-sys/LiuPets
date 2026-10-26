@@ -38,6 +38,7 @@ public class PetInventoryHolder implements InventoryHolder {
     }
 
     public enum Type {
+        PET_HUB,
         CATEGORIES_MENU,
         CATEGORY_MENU,
         EDITOR_MENU,
@@ -47,5 +48,6 @@ public class PetInventoryHolder implements InventoryHolder {
         PET_INVENTORY_MENU,
         PET_MENU,
         PET_SKINS_MENU,
+        ACTIVE_PETS_MENU,
     }
 }
