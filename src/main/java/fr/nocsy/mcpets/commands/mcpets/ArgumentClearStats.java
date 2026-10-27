@@ -19,7 +19,7 @@ import java.util.UUID;
 public class ArgumentClearStats extends AArgument {
 
     public ArgumentClearStats(CommandSender sender, String[] args) {
-        super("clearStats", new int[]{3, 2}, sender, args, "/liupets clearStats <player|petId> [petId]");
+        super("clearStats", new int[]{3, 2}, sender, args, "/liupets clearStats <玩家|宠物ID> [宠物ID]");
     }
 
     @Override

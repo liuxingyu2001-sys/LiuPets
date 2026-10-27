@@ -39,7 +39,7 @@ public class LivingPetsListener implements Listener {
         if (pet != null && pet.getPetStats() != null) {
             PetDamagedEvent event = new PetDamagedEvent(pet, e.getDamage(), true);
             Utils.callEvent(event);
-            Debugger.send("§7PetDamagedEvent triggered for pet §6" + pet.getId() + "§7 with original damages §6" + e.getDamage() + "§7 and modified damages §6" + event.getModifiedDamageAmount() + "§7.");
+            Debugger.send("§7宠物伤害事件：宠物 §6" + pet.getId() + "§7原始伤害 §6" + e.getDamage() + "§7修正后伤害 §6" + event.getModifiedDamageAmount() + "§7。");
             e.setCancelled(event.isCancelled());
             e.setDamage(event.getModifiedDamageAmount());
         }
@@ -211,7 +211,7 @@ public class LivingPetsListener implements Listener {
             PetStats stats = PetStats.getPetStatsOnRespawnTimerRunning(pet.getOwner());
             if (stats != null) {
                 e.setCancelled(true);
-                Debugger.send("§cSpawn of §6" + pet.getId() + "§c cancelled: global respawn timer is running (pet §6" + stats.getPet().getId() + "§c, §6" + stats.getRespawnTimer().getRemainingTime() + "s§c left).");
+                Debugger.send("§c宠物 §6" + pet.getId() + "§c召唤取消：全局复活计时中（宠物 §6" + stats.getPet().getId() + "§c，剩余 §6" + stats.getRespawnTimer().getRemainingTime() + " 秒§c）。");
                 PetDespawnEvent petDespawnEvent = new PetDespawnEvent(pet, PetDespawnReason.RESPAWN_TIMER);
                 Utils.callEvent(petDespawnEvent);
 
@@ -229,7 +229,7 @@ public class LivingPetsListener implements Listener {
 
             if (stats.getRespawnTimer().isRunning()) {
                 e.setCancelled(true);
-                Debugger.send("§cSpawn of §6" + pet.getId() + "§c cancelled: respawn timer is running (§6" + stats.getRespawnTimer().getRemainingTime() + "s§c left).");
+                Debugger.send("§c宠物 §6" + pet.getId() + "§c召唤取消：复活计时中（剩余 §6" + stats.getRespawnTimer().getRemainingTime() + " 秒§c）。");
                 PetDespawnEvent petDespawnEvent = new PetDespawnEvent(pet, PetDespawnReason.RESPAWN_TIMER);
                 Utils.callEvent(petDespawnEvent);
 
@@ -242,7 +242,7 @@ public class LivingPetsListener implements Listener {
             }
             else if (stats.getRevokeTimer().isRunning()) {
                 e.setCancelled(true);
-                Debugger.send("§cSpawn of §6" + pet.getId() + "§c cancelled: revoke timer is running (§6" + stats.getRevokeTimer().getRemainingTime() + "s§c left).");
+                Debugger.send("§c宠物 §6" + pet.getId() + "§c召唤取消：收回计时中（剩余 §6" + stats.getRevokeTimer().getRemainingTime() + " 秒§c）。");
                 PetDespawnEvent petDespawnEvent = new PetDespawnEvent(pet, PetDespawnReason.REVOKE_TIMER);
                 Utils.callEvent(petDespawnEvent);
 

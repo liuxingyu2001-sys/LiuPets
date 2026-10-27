@@ -84,7 +84,7 @@ public class PetConfig extends AbstractConfig {
      */
     public static void loadPets(final String folderPath, final boolean clearPets) {
         if (clearPets) {
-            Bukkit.getConsoleSender().sendMessage("§9Loading pets... ");
+            Bukkit.getConsoleSender().sendMessage("§9正在加载宠物配置...");
             Pet.getObjectPets().clear();
         }
 
@@ -103,9 +103,9 @@ public class PetConfig extends AbstractConfig {
 
             if (petConfig.getPet() != null) {
                 if (Pet.getObjectPets().stream().anyMatch(pet -> pet.getId().equalsIgnoreCase(petConfig.getPet().getId())))
-                    Bukkit.getConsoleSender().sendMessage("  §c* " + petConfig.getPet().getId() + " could not be loaded: another pet with the same ID already exists.");
+                    Bukkit.getConsoleSender().sendMessage("  §c* " + petConfig.getPet().getId() + " 加载失败：已存在相同 ID 的宠物。");
                 else {
-                    Debugger.send("  §7- " + petConfig.getPet().getId() + " loaded successfully.");
+                    Debugger.send("  §7- " + petConfig.getPet().getId() + " 加载成功。");
                     Pet.getObjectPets().add(petConfig.getPet());
                 }
             }
@@ -116,7 +116,7 @@ public class PetConfig extends AbstractConfig {
         Pet.getObjectPets().sort(Comparator.comparing(Pet::getId));
 
         if (clearPets)
-            MCPets.getLog().info(Pet.getObjectPets().size() + " pets registered successfully !");
+            MCPets.getLog().info("已成功注册 " + Pet.getObjectPets().size() + " 只宠物。");
     }
 
     /**
@@ -161,11 +161,11 @@ public class PetConfig extends AbstractConfig {
 
         if (id == null) {
             // Warning case on which something essential would be missing
-            MCPets.getLog().warning("This pet could not be registered. Please check the configuration file to make sure you didn't miss anything.");
-            MCPets.getLog().warning("Information about the registered pet : ");
-            MCPets.getLog().warning("id : " + id);
-            MCPets.getLog().warning("mobType : " + mobType);
-            MCPets.getLog().warning("permission : " + permission);
+            MCPets.getLog().warning("该宠物无法注册，请检查配置文件是否缺少必填项。");
+            MCPets.getLog().warning("宠物注册信息：");
+            MCPets.getLog().warning("ID：" + id);
+            MCPets.getLog().warning("生物类型：" + mobType);
+            MCPets.getLog().warning("权限：" + permission);
             return;
         }
 
@@ -198,10 +198,10 @@ public class PetConfig extends AbstractConfig {
         pet.setTamingProgressSkill(tamingSkillName);
         pet.setTamingOverSkill(tamingOverSkillName);
 
-        final ItemStack icon = legacyItemRead(pet.getIcon(), true, pet.toString(), "§cIcon (not set)", "Icon");
+        final ItemStack icon = legacyItemRead(pet.getIcon(), true, pet.toString(), "§c图标未设置", "Icon");
         pet.setIcon(icon);
 
-        final ItemStack signalStickItem = legacyItemRead(pet.getSignalStick(), false, Items.buildSignalStickTag(pet), "§cSignal stick (not set)", "Signals.Item");
+        final ItemStack signalStickItem = legacyItemRead(pet.getSignalStick(), false, Items.buildSignalStickTag(pet), "§c指挥棒未设置", "Signals.Item");
         pet.setSignalStick(signalStickItem);
 
         reloadSkins();
@@ -404,7 +404,7 @@ public class PetConfig extends AbstractConfig {
             final String mythicMobId = getConfig().getString(key + ".MythicMob");
             final String skinPerm = getConfig().getString(key + ".Permission");
 
-            final ItemStack skinIcon = legacyItemRead(null, false, "", "§cSkin icon (not set)", key + ".Icon");
+            final ItemStack skinIcon = legacyItemRead(null, false, "", "§c外观图标未设置", key + ".Icon");
 
             PetSkin.load(key, pet, mythicMobId, skinPerm, skinIcon);
         }

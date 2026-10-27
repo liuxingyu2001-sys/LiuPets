@@ -1,5 +1,7 @@
 package fr.nocsy.mcpets.data.editor;
 
+import fr.nocsy.mcpets.data.config.FormatArg;
+import fr.nocsy.mcpets.data.config.Language;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
@@ -27,12 +29,13 @@ public class EditorConversation {
 
     public void start() {
         conversations.put(player.getUniqueId(), this);
-        player.sendMessage("§aPlease type in the chat the value you want to set for the \"§e" + editorItem.getId().replace("_", " ").toLowerCase() + "§a\".");
+        final String field = EditorText.nameOf(editorItem.getItem().getItemMeta().getDisplayName());
+        Language.EDITOR_PROMPT_VALUE.sendMessageFormatted(player, new FormatArg("%field%", field));
 
         if (editorItem.getType().equals(EditorExpectationType.STRING_LIST)) {
-            player.sendMessage("§eSeperate the different elements with a comma §c, §e like this example: §6SPELL,SHIELD");
+            Language.EDITOR_PROMPT_LIST.sendMessage(player);
         }
-        player.sendMessage("§aType §cQuit§a if you don't want to change the value anymore.");
+        Language.EDITOR_PROMPT_QUIT.sendMessage(player);
     }
 
     public boolean entryMatch(String entry) {
@@ -45,13 +48,14 @@ public class EditorConversation {
 
     public void quit() {
         conversations.remove(player.getUniqueId());
-        player.sendMessage("§cThe value was left unchanged.");
+        Language.EDITOR_CANCELLED.sendMessage(player);
     }
 
     public void end() {
         conversations.remove(player.getUniqueId());
-        player.sendMessage("§aThe value for \"§e" + editorItem.getId().replace("_", " ").toLowerCase() + "§a\" was changed successfully!");
-        player.sendMessage("§aDon't forget to §nreload§a MCPets for the changes to take effect.");
+        final String field = EditorText.nameOf(editorItem.getItem().getItemMeta().getDisplayName());
+        Language.EDITOR_VALUE_CHANGED.sendMessageFormatted(player, new FormatArg("%field%", field));
+        Language.EDITOR_RELOAD_HINT.sendMessage(player);
     }
 
     /**
@@ -62,7 +66,7 @@ public class EditorConversation {
     public static void clearAll() {
         for (EditorConversation conversation : conversations.values()) {
             if (conversation.getPlayer() != null && conversation.getPlayer().isOnline()) {
-                conversation.getPlayer().sendMessage("§cThe editor conversation was interrupted because the plugin was reloaded.");
+                Language.EDITOR_INTERRUPTED.sendMessage(conversation.getPlayer());
             }
         }
         conversations.clear();

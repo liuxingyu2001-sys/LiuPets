@@ -31,11 +31,13 @@ commands:
     description: 打开宠物中心或管理宠物
     usage: /liupets
     permission: mcpets.use
+    permission-message: '§c你没有使用此命令的权限。'
     aliases: [pets, mcpets, lpets]
   mcmounts:
     description: 打开坐骑菜单
     usage: /mcmounts
     permission: mcpets.use
+    permission-message: '§c你没有使用此命令的权限。'
     aliases: [mounts]
 
 permissions:

@@ -99,7 +99,7 @@ public class PetStatsSerializer {
         } catch (RuntimeException ex) {
             // Corrupted row / hand-edited file: skip this entry instead of aborting
             // the whole player-data load (or breaking the join task).
-            fr.nocsy.mcpets.MCPets.getLog().warning("Skipping corrupted pet stats entry: " + ex.getMessage());
+            fr.nocsy.mcpets.MCPets.getLog().warning("已跳过损坏的宠物统计数据：" + ex.getMessage());
             return null;
         }
     }

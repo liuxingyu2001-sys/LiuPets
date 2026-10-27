@@ -265,22 +265,22 @@ public class Pet {
      * Determine if this pet is a mount based on its category type
      */
     public boolean isMount() {
-        Debugger.send("§6Checking if pet " + this.id + " is a mount...");
+        Debugger.send("§6正在检查宠物 " + this.id + " 是否可骑乘……");
         // Find the category that contains this pet
         for (final Category cat : Category.getCategories()) {
-            Debugger.send("§7Checking category: " + cat.getId() + " (type: " + cat.getCategoryType() + ")");
+            Debugger.send("§7检查分类：" + cat.getId() + "（类型：" + cat.getCategoryType() + "）");
             // Check if any pet in this category has the same ID as this pet
             for (final Pet pet : cat.getPets()) {
                 if (pet.getId().equals(this.id)) {
                     final CategoryType type = cat.getCategoryType();
                     final boolean result = type == CategoryType.MOUNT;
-                    Debugger.send("§aFound pet in category! Type: " + type + " -> isMount: " + result);
+                    Debugger.send("§a在分类中找到宠物！类型：" + type + " -> 是否坐骑：" + result);
                     return result;
                 }
             }
         }
         // If no category found or category is DEFAULT/PET, return false
-        Debugger.send("§cPet not found in any category, defaulting to PET");
+        Debugger.send("§c未在任何分类中找到宠物，默认按宠物处理");
         return false;
     }
 
@@ -586,7 +586,7 @@ public class Pet {
      * Spawn the pet if possible. Return values are indicated in this class.
      */
     public int spawn(final Location loc, final boolean bruise) {
-        Debugger.send("§aSpawning pet " + id + "...");
+        Debugger.send("§a正在召唤宠物 " + id + "……");
         // if the pet has no pet stats, then we try to set one
         if (petStats == null) {
             setPetStats();
@@ -605,11 +605,11 @@ public class Pet {
 
         // If the event is cancelled trigger a despawn
         if (event.isCancelled()) {
-            Debugger.send("§cThe spawn event for §6" + id + "§c was cancelled. Check above for details, or an external plugin may have cancelled it.");
+            Debugger.send("§c宠物 §6" + id + "§c的召唤事件被取消，请查看上方信息，可能是其他插件取消了召唤。");
             // List all plugins listening to PetSpawnEvent to help identify the culprit
             for (final org.bukkit.plugin.RegisteredListener rl : PetSpawnEvent.getHandlerList().getRegisteredListeners()) {
                 if (!rl.getPlugin().equals(MCPets.getInstance())) {
-                    Debugger.send("§c  -> External listener: §6" + rl.getPlugin().getName() + "§c (priority: " + rl.getPriority() + ")");
+                    Debugger.send("§c  -> 外部监听器：§6" + rl.getPlugin().getName() + "§c（优先级：" + rl.getPriority() + "）");
                 }
             }
             // Show an explicit message: otherwise a cancelled spawn looked like a dead click.
@@ -625,7 +625,7 @@ public class Pet {
             despawn(PetDespawnReason.LOOP_SPAWN);
             if (Bukkit.getPlayer(owner) != null)
                 Language.LOOP_SPAWN.sendMessage(Bukkit.getPlayer(owner));
-            Debugger.send("§cPet was despawned coz it was stuck in a spawn loop.");
+            Debugger.send("§c宠物陷入召唤循环，已自动收回。");
             return BLOCKED;
         } else {
             recurrent_spawn = true;
@@ -642,7 +642,7 @@ public class Pet {
         if (checkPermission && owner != null &&
                 Bukkit.getPlayer(owner) != null &&
                 !Utils.hasPermission(owner, permission)) {
-            Debugger.send("§cUser is not allowed to spawn that pet.");
+            Debugger.send("§c玩家没有权限召唤该宠物。");
             despawn(PetDespawnReason.DONT_HAVE_PERM);
             return NOT_ALLOWED;
         }
@@ -655,7 +655,7 @@ public class Pet {
         if (owner != null) {
             spawnKey = owner.toString() + ":" + this.id;
             if (spawningPets.contains(spawnKey)) {
-                Debugger.send("§cPet spawn already in progress for: " + this.id);
+                Debugger.send("§c宠物召唤已在进行中：" + this.id);
                 return BLOCKED;
             }
 
@@ -665,7 +665,7 @@ public class Pet {
                 if (activePet == this) continue;
 
                 if (activePet.getId().equals(this.id)) {
-                    Debugger.send("§cPlayer already has this pet active: " + this.id);
+                    Debugger.send("§c玩家已召唤该宠物：" + this.id);
                     // Don't spawn, just return blocked
                     return BLOCKED;
                 }
@@ -689,15 +689,15 @@ public class Pet {
             // Any issue with the mythicmobs definition ?
             // Any issue with the owner definition ?
             if (mythicMobName == null) {
-                Debugger.send("§cMythicMob name is null, check out your pet config.");
+                Debugger.send("§cMythicMob 名称为空，请检查宠物配置。");
                 return MYTHIC_MOB_NULL;
             } else if (owner == null) {
-                Debugger.send("§cOwner was not found.");
+                Debugger.send("§c找不到宠物主人。");
                 return OWNER_NULL;
             }
 
             if (MCPets.getMythicMobs().getMobManager().getMythicMob(mythicMobName).isEmpty()) {
-                Debugger.send("§cThe MythicMob §6" + mythicMobName + "§c doesn't exist in MythicMobs. §7Check your pet config to make sure the MythicMob you chose actually exists.");
+                Debugger.send("§cMythicMob §6" + mythicMobName + "§c不存在，请检查宠物配置中的 MythicMob ID 是否正确。");
                 return MYTHIC_MOB_NULL;
             }
 
@@ -712,7 +712,7 @@ public class Pet {
                         // Reject mount spawns inside solid blocks — prevents the wall-clip exploit
                         // where a mount is spawned in a wall to drag the rider through it.
                         if (this.isMount() && !Utils.isLocationClearForMount(loc)) {
-                            Debugger.send("§cBlocked mount spawn inside a solid block for pet §6" + id + "§c (owner: " + owner + ").");
+                            Debugger.send("§c坐骑生成位置在固体方块内，已阻止生成：宠物 §6" + id + "§c（主人：" + owner + "）。");
                             final Player ownerPlayer = Bukkit.getPlayer(owner);
                             if (ownerPlayer != null)
                                 Language.NOT_MOUNTABLE_HERE.sendMessage(ownerPlayer);
@@ -725,7 +725,7 @@ public class Pet {
                         if (bruise)
                             spawnLoc = Utils.bruised(loc, getSpawnRange());
                         if (this.isMount() && !Utils.isLocationClearForMount(spawnLoc)) {
-                            Debugger.send("§cBlocked mount spawn inside a solid block for pet §6" + id + "§c (owner: " + owner + ").");
+                            Debugger.send("§c坐骑生成位置在固体方块内，已阻止生成：宠物 §6" + id + "§c（主人：" + owner + "）。");
                             final Player ownerPlayer = Bukkit.getPlayer(owner);
                             if (ownerPlayer != null)
                                 Language.NOT_MOUNTABLE_HERE.sendMessage(ownerPlayer);
@@ -736,14 +736,14 @@ public class Pet {
                     }
                 } catch (final NullPointerException | NoSuchElementException ex) {
                     // if there's been a problem, trigger a despawn
-                    Debugger.send("§cMythicMob " + mythicMobName + " was not found.");
+                    Debugger.send("§cMythicMob " + mythicMobName + " 未找到。");
                     despawn(PetDespawnReason.SPAWN_ISSUE);
                     return MYTHIC_MOB_NULL;
                 }
 
                 // If the pet is not here, trigger a despawn
                 if (ent == null) {
-                    Debugger.send("§cMythicMob was found but the entity was not able to spawn.");
+                    Debugger.send("§c已找到 MythicMob，但实体无法生成。");
                     despawn(PetDespawnReason.SPAWN_ISSUE);
                     return MYTHIC_MOB_NULL;
                 }
@@ -754,7 +754,7 @@ public class Pet {
 
                 // Sometimes it can happen that the mob isn't registered, so we try to register it manually
                 if (activeMob == null) {
-                    Debugger.send("§6Warn: §7MythicMobs didn't have the mob in the registry, let's try to register it manually.");
+                    Debugger.send("§6提示：§7MythicMobs 注册表中没有该生物，尝试手动注册。");
                     final ActiveMob mob = MCPets.getMythicMobs().getMobManager().registerActiveMob(
                             BukkitAdapter.adapt(ent),
                             MCPets.getMythicMobs().getMobManager().getMythicMob(mythicMobName).get(),
@@ -767,12 +767,12 @@ public class Pet {
 
                 // If any weird thing happened and the activeMob couldn't be registered, then we cancel everything
                 if (activeMob == null) {
-                    Debugger.send("§cMythicMob was spawned but MCPets couldn't link it to an active mob. Trying again in 0.5s automatically...");
+                    Debugger.send("§cMythicMob 已生成，但 LiuPets 无法关联到活跃实体，0.5 秒后自动重试……");
                     // We remove the entity coz that'll not be done by the despawn since the activeMob is null
                     ent.remove();
                     if (spawnRetries++ >= 3) {
                         spawnRetries = 0;
-                        Debugger.send("§cGiving up after 3 registration retries for " + mythicMobName + ".");
+                        Debugger.send("§c重试 3 次后放弃注册：" + mythicMobName + "。");
                         despawn(PetDespawnReason.SPAWN_ISSUE);
                         return MYTHIC_MOB_NULL;
                     }
@@ -812,14 +812,14 @@ public class Pet {
 
                 // Either we despawned a previous pet or not
                 if (returnDespawned) {
-                    Debugger.send("§aSpawn successfuly happened. Previous pet is going to be despawned.");
+                    Debugger.send("§a召唤成功，之前的宠物将被收回。");
                     return DESPAWNED_PREVIOUS;
                 }
                 return MOB_SPAWN;
 
             } catch (final InvalidMobTypeException e) {
                 // If there's a mob bug, despawn the current pet
-                Debugger.send("§cImpossible to spawn the pet: MythicMob was not found.");
+                Debugger.send("§c无法召唤宠物：未找到 MythicMob。");
                 despawn(PetDespawnReason.SPAWN_ISSUE);
                 return NO_MOB_MATCH;
             }
@@ -900,7 +900,7 @@ public class Pet {
 
         // Add the pet to the active list of pets for the given owner
         Pet.addActivePet(owner, this);
-        Debugger.send("§b[LIMIT CHECK] Pet " + this.id + " added to active list for owner " + owner);
+        Debugger.send("§b[数量检查] 宠物 " + this.id + " 已加入主人的活跃列表：" + owner);
 
         if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
             final PlayerData pd = PlayerData.get(owner);
@@ -914,12 +914,12 @@ public class Pet {
         // Check max active pets/mounts limit AFTER adding this pet to the list
         // This ensures accurate counting and prevents race conditions
         final boolean isMount = this.isMount();
-        Debugger.send("§b[LIMIT CHECK] Pet " + this.id + " isMount: " + isMount);
+        Debugger.send("§b[数量检查] 宠物 " + this.id + " 是否坐骑：" + isMount);
 
         final int maxAllowed = isMount ?
                 GlobalConfig.getInstance().getMaxActiveMounts() :
                 GlobalConfig.getInstance().getMaxActivePets();
-        Debugger.send("§b[LIMIT CHECK] Max allowed for " + (isMount ? "mounts" : "pets") + ": " + maxAllowed);
+        Debugger.send("§b[数量检查] 允许上限（" + (isMount ? "坐骑" : "宠物") + "）：" + maxAllowed);
 
         if (maxAllowed > 0) {
             // Get all active pets/mounts of the same type for this owner
@@ -929,13 +929,13 @@ public class Pet {
                     .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
 
             long currentCount = sameLevelTypePets.size();
-            Debugger.send("§b[LIMIT CHECK] Current count of " + (isMount ? "mounts" : "pets") + ": " + currentCount);
-            Debugger.send("§b[LIMIT CHECK] List of same type pets: " + sameLevelTypePets.stream().map(Pet::getId).collect(java.util.stream.Collectors.joining(", ")));
+            Debugger.send("§b[数量检查] 当前数量（" + (isMount ? "坐骑" : "宠物") + "）：" + currentCount);
+            Debugger.send("§b[数量检查] 同类型宠物列表：" + sameLevelTypePets.stream().map(Pet::getId).collect(java.util.stream.Collectors.joining("、")));
 
             // If we// If we exceeded the limit, despawn oldest ones (that are not this one) until back under the limit
             if (currentCount > maxAllowed) {
                 final String type = isMount ? "mount" : "pet";
-                Debugger.send("§eMax " + type + " limit exceeded (" + currentCount + "/" + maxAllowed + "), despawning oldest...");
+                Debugger.send("§e超过上限：" + type + "（" + currentCount + "/" + maxAllowed + "），正在收回最早召唤的宠物……");
 
                 // Continue despawning until the count no longer exceeds the limit
                 while (currentCount > maxAllowed) {
@@ -951,21 +951,21 @@ public class Pet {
 
                     // Safety check to avoid infinite loops if no eligible pet is found
                     if (petToDespawn == null) {
-                        Debugger.send("§c[LIMIT CHECK] No eligible " + type + " found to despawn while enforcing limit for " + this.id + ". Breaking out to avoid infinite loop.");
+                        Debugger.send("§c[数量检查] 没有可收回的 " + type + "，无法为 " + this.id + " 执行数量限制；为避免死循环已停止。");
                         break;
                     }
 
-                    Debugger.send("§eDespawning " + petToDespawn.getId() + " to enforce limit for " + this.id);
+                    Debugger.send("§e正在收回 " + petToDespawn.getId() + " 以满足数量限制：" + this.id);
                     petToDespawn.despawn(PetDespawnReason.REPLACED);
                     sameLevelTypePets.remove(petToDespawn);
                     currentCount--;
                     replaced = true;
                 }
             } else {
-                Debugger.send("§b[LIMIT CHECK] No despawn needed. Count (" + currentCount + ") <= max (" + maxAllowed + ")");
+                Debugger.send("§b[数量检查] 无需收回。当前数量（" + currentCount + "）<= 上限（" + maxAllowed + "）");
             }
         } else {
-            Debugger.send("§b[LIMIT CHECK] No limit configured (maxAllowed = 0)");
+            Debugger.send("§b[数量检查] 未配置上限（maxAllowed = 0）");
         }
 
         // Load the player data for the pet
@@ -996,7 +996,7 @@ public class Pet {
      */
     public void setActiveMob(final ActiveMob mob) {
         if (mob == null) {
-            Debugger.send("§cCould not set the active pet to the new one: mob instance is null");
+            Debugger.send("§c无法将活跃宠物切换为新宠物：生物实例为空");
             despawn(PetDespawnReason.CHANGING_TO_NULL_ACTIVEMOB);
             return;
         }
@@ -1045,7 +1045,7 @@ public class Pet {
                     return;
 
                 if (!getInstance().isStillHere()) {
-                    Debugger.send("§6[AiManager] : §cPet " + getId() + " is not here, so it gets despawned.");
+                    Debugger.send("§6[AI 管理]：§c宠物 " + getId() + " 不在此处，已被收回。");
                     getInstance().despawn(PetDespawnReason.AI_TRACK_DESPAWN);
                     stopAI();
                     return;
@@ -1053,7 +1053,7 @@ public class Pet {
 
                 final String permission = getInstance().getPermission();
                 if (getInstance().isCheckPermission() && (permission == null || !p.hasPermission(permission))) {
-                    Debugger.send("§6[AiManager] : §cPet " + getId() + " despawned because the owner doesn't have permission");
+                    Debugger.send("§6[AI 管理]：§c宠物 " + getId() + " 因主人没有权限而被收回");
                     getInstance().despawn(PetDespawnReason.DONT_HAVE_PERM);
                     stopAI();
                     return;
@@ -1122,7 +1122,7 @@ public class Pet {
         final PetDespawnEvent event = new PetDespawnEvent(this, reason);
         Utils.callEvent(event);
 
-        Debugger.send("§6Pet §7" + id + "§6 has §cdespawned§6. Reason: §a" + reason.getReason());
+        Debugger.send("§6宠物 §7" + id + "§6 已§c收回§6。原因：§a" + reason.getReason());
 
         stopAI();
         removed = true;
@@ -1178,7 +1178,7 @@ public class Pet {
             activeMob = null;
 
             Pet.removeActivePet(owner, this);
-            Debugger.send("§b[DESPAWN] Removed pet " + id + " from active list");
+            Debugger.send("§b[收回] 已移除宠物 " + id + " 从活跃列表");
             if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
                 if (reason == PetDespawnReason.REVOKE || reason == PetDespawnReason.DISMOUNT || reason == PetDespawnReason.UNKNOWN) {
                     final PlayerData pd = PlayerData.get(owner);
@@ -1191,9 +1191,9 @@ public class Pet {
             return true;
         }
 
-        Debugger.send("§cActive mob was not found, so it could not be despawned.");
+        Debugger.send("§c找不到活跃生物，无法收回。");
         Pet.removeActivePet(owner, this);
-        Debugger.send("§b[DESPAWN] Removed pet " + id + " from active list (no active mob)");
+        Debugger.send("§b[收回] 已移除宠物 " + id + " 从活跃列表（没有活跃生物）");
         if (GlobalConfig.getInstance().isSpawnPetAfterServerRestart()) {
             if (reason == PetDespawnReason.REVOKE || reason == PetDespawnReason.DISMOUNT || reason == PetDespawnReason.UNKNOWN) {
                 final PlayerData pd = PlayerData.get(owner);
@@ -1256,7 +1256,7 @@ public class Pet {
      */
     public void teleportToPlayer(final Player p) {
         final Location loc = Utils.bruised(p.getLocation(), Math.min(getSpawnRange(), getDistance()));
-        Debugger.send("§7teleporting pet " + id + " to player " + p.getName());
+        Debugger.send("§7正在传送宠物 " + id + " 到玩家 " + p.getName());
         if (isStillHere())
             this.teleport(loc);
     }
@@ -1359,7 +1359,7 @@ public class Pet {
                     }
                 }.runTaskLater(MCPets.getInstance(), 10L);
 
-                Debugger.send("§7Applying name " + name + " to pet " + id);
+                Debugger.send("§7正在应用名字 " + name + " 到宠物 " + id);
                 if (save) {
                     String savedName = currentName;
                     if (isDefaultName) savedName = Language.TAG_TO_REMOVE_NAME.getMessage();
@@ -1543,7 +1543,7 @@ public class Pet {
                         }
                     }
                 }
-                Debugger.send("§aSending signal §6" + signal + "§a to pet " + id);
+                Debugger.send("§a正在发送信号 §6" + signal + "§a 到宠物 " + id);
                 mob.signalMob(mob.getEntity(), signal);
                 return true;
             } catch (final Exception ex) {
@@ -1566,7 +1566,7 @@ public class Pet {
      */
     public ItemStack buildItem(ItemStack item, final boolean showStats, final String localizedName, String iconName, final List<String> description, final String materialType, final int customModelData, final String textureBase64, final String itemModel, final String tooltipStyle) {
         final Material mat = materialType != null ? Material.getMaterial(materialType) : null;
-        if (iconName == null) iconName = "§cUndefined";
+        if (iconName == null) iconName = "§c未定义";
         iconName = Utils.applyPlaceholders(owner, iconName);
 
         final List<Component> desc = new ArrayList<>();

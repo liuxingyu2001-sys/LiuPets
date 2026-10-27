@@ -128,7 +128,7 @@ public class PetInventory {
                 try {
                     inv = unserializeInventory(serialized);
                 } catch (IOException ex) {
-                    MCPets.getLog().warning("Could not restore pet inventory of " + pet.getId() + ": " + ex.getMessage());
+                    MCPets.getLog().warning("无法恢复宠物 " + pet.getId() + " 的背包：" + ex.getMessage());
                 }
             }
         }
@@ -149,7 +149,7 @@ public class PetInventory {
         if (serialized == null) return null;
         String[] data = serialized.split(";", 2);
         if (data.length != 2) {
-            MCPets.getLog().warning("Skipping malformed pet inventory entry: " + serialized);
+            MCPets.getLog().warning("已跳过格式错误的宠物背包数据：" + serialized);
             return null;
         }
         String petId = data[0];

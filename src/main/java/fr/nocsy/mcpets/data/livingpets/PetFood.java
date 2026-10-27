@@ -215,7 +215,7 @@ public class PetFood {
 
         int foodCooldown = getRemainingCooldownInSeconds(pet);
         if (foodCooldown > 0) {
-            Debugger.send("§7NOT applying pet food §6" + id + "§7 to §6" + pet.getId() + "§7 because it's on cooldown for " + foodCooldown + "s more");
+            Debugger.send("§7未使用宠物食物 §6" + id + "§7 喂食 §6" + pet.getId() + "§7，还需等待 " + foodCooldown + " 秒冷却");
             Language.PET_FOOD_ON_COOLDOWN.sendMessageFormatted(p, new FormatArg("%timeleft%", foodCooldown));
             return false;
         }
@@ -223,13 +223,13 @@ public class PetFood {
         // says whether the petfood was triggered or not
         boolean triggered = false;
 
-        Debugger.send("§7Applying pet food §6" + id + "§7 to §6" + pet.getId() + "§7 with type §a" + type.getType());
+        Debugger.send("§7正在对 §6" + pet.getId() + "§7 使用宠物食物 §6" + id + "§7，类型 §a" + type.getType());
 
         PetStats stats = pet.getPetStats();
         switch (type) {
             case HEALTH -> {
                 if (stats == null || stats.getCurrentHealth() >= stats.getCurrentLevel().getMaxHealth()) {
-                    Debugger.send("§cCould not give HEALTH to the pet because it is already at maximum value.");
+                    Debugger.send("§c无法恢复生命：宠物生命值已满。");
                     break;
                 }
 
@@ -238,7 +238,7 @@ public class PetFood {
             }
             case TAME -> {
                 if (pet.getTamingProgress() >= 1) {
-                    Debugger.send("§cCould not give TAMING PROGRESS to the pet because it has reached maximum value.");
+                    Debugger.send("§c无法增加驯服进度：已达到最大值。");
                     break;
                 }
 
@@ -253,7 +253,7 @@ public class PetFood {
                 triggered = stats.addExperience(power);
 
                 if (!triggered) {
-                    Debugger.send("§cCould not give EXP to the pet because it has reached maximum value.");
+                    Debugger.send("§c无法增加经验：已达到最大值。");
                 }
             }
             case EVOLUTION -> {
@@ -261,7 +261,7 @@ public class PetFood {
                 if (stats == null
                         || evolutionPet == null
                         || stats.getExperience() < experienceThreshold) {
-                    Debugger.send("§cCould not evolve pet has conditions are not met or the evolution doesn't exist.");
+                    Debugger.send("§c无法进化：条件未满足或进化目标不存在。");
                     break;
                 }
 
@@ -281,7 +281,7 @@ public class PetFood {
 
                 Pet unlockedPetObject = Pet.getFromId(unlockedPet);
                 if (unlockedPetObject == null) {
-                    Debugger.send("§7The player §c" + p.getName() + "§7 tried to unlock a pet using an unlock item but the pet §7"+ unlockedPet +"§7 does not exist.");
+                    Debugger.send("§7玩家 §c" + p.getName() + "§7 尝试使用解锁道具，但宠物 §7" + unlockedPet + "§7 不存在。");
                     return false;
                 }
 
@@ -291,7 +291,7 @@ public class PetFood {
                 }
 
                 if (p.hasPermission(unlockedPetObject.getPermission())) {
-                    Debugger.send("§7The player §c" + p.getName() + "§7 tried to unlock a pet using an unlock item but they already own the pet.");
+                    Debugger.send("§7玩家 §c" + p.getName() + "§7 尝试使用解锁道具，但已拥有该宠物。");
                     Language.PETUNLOCKED_ALREADY.sendMessageFormatted(p, new FormatArg("%petName%", unlockedPetObject.getIcon().getItemMeta().getDisplayName()));
                     return false;
                 }

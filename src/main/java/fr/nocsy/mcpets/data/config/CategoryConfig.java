@@ -130,7 +130,7 @@ public class CategoryConfig extends AbstractConfig {
                 category.setCategoryType(type);
             } catch (final IllegalArgumentException e) {
                 // If invalid type, default to PET
-                MCPets.getLog().warning("Invalid category type '" + typeStr + "' for category " + id + ". Defaulting to PET.");
+                MCPets.getLog().warning("分类 " + id + " 的类型 " + typeStr + " 无效，已回退为 PET。");
                 category.setCategoryType(CategoryType.PET);
             }
         }
@@ -197,7 +197,7 @@ public class CategoryConfig extends AbstractConfig {
         Category.getCategories().sort(Comparator.comparing(Category::getId));
 
         if (clear)
-            MCPets.getLog().info(Category.getCategories().size() + " categories registered successfully !");
+            MCPets.getLog().info("已成功注册 " + Category.getCategories().size() + " 个分类。");
     }
 
     public static void registerCleanCategory(final Player creator) {

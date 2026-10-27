@@ -58,8 +58,8 @@ public class BetterModelListeners {
             mountEntity = ((BukkitEntity) event.tracker().sourceEntity()).source();
             playerEntity = ((BukkitEntity) event.entity()).source();
         } catch (ClassCastException e) {
-            MCPets.getLog().warning("[BetterModel] Unexpected entity type in MountModelEvent — permission checks skipped: " + e.getMessage());
-            Debugger.send("§c[BetterModel] ClassCastException in onMount: " + e.getMessage());
+            MCPets.getLog().warning("[BetterModel] 骑乘事件中出现意外实体类型，已跳过权限检查：" + e.getMessage());
+            Debugger.send("§c[BetterModel] onMount 发生类型转换异常：" + e.getMessage());
             return;
         }
 
@@ -76,8 +76,8 @@ public class BetterModelListeners {
                 && !playerEntity.hasPermission(PPermission.ADMIN.getPermission())) {
             event.setCancelled(true);
             Debugger.send("[MountModelEvent] §c" + playerEntity.getName()
-                    + " can not mount model of " + pet.getId()
-                    + " as he's not the owner, nor an admin.");
+                    + " 无法骑乘 " + pet.getId()
+                    + " 的模型：既不是主人也不是管理员。");
             return;
         }
 
@@ -87,8 +87,8 @@ public class BetterModelListeners {
                 && FlagsManager.getFlag(DismountPetFlag.NAME).testState(playerEntity.getLocation())) {
             event.setCancelled(true);
             Debugger.send("§c" + playerEntity.getName()
-                    + " can not mount model of " + pet.getId()
-                    + " as a region is preventing mounting.");
+                    + " 无法骑乘 " + pet.getId()
+                    + " 的模型：当前区域禁止骑乘。");
             Language.NOT_MOUNTABLE_HERE.sendMessage(playerEntity);
             if (pet.isDespawnOnDismount())
                 pet.despawn(PetDespawnReason.FLAG);
@@ -112,7 +112,7 @@ public class BetterModelListeners {
         try {
             mountEntity = ((BukkitEntity) event.tracker().sourceEntity()).source();
         } catch (ClassCastException e) {
-            Debugger.send("§c[BetterModel] ClassCastException in onDismount: " + e.getMessage());
+            Debugger.send("§c[BetterModel] onDismount 发生类型转换异常：" + e.getMessage());
             return;
         }
 

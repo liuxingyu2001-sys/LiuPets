@@ -29,11 +29,11 @@ public class DespawnPetFlag extends AbstractFlag implements StoppableFlag {
     @Override
     public void launch() {
         if (getFlag() == null) {
-            MCPets.getLog().warning("Flag " + getFlagName() + " couldn't not be launched as it's null. Please contact Nocsy.");
+            MCPets.getLog().warning("旗标 " + getFlagName() + " 为空，无法启动。");
             return;
         }
 
-        MCPets.getLog().info("Starting flag " + getFlagName() + ".");
+        MCPets.getLog().info("正在启动旗标 " + getFlagName() + "。");
 
         task = Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(getMCPetsInstance(), () -> {
             if (MCPets.getMythicMobs() == null) return;

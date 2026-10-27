@@ -59,7 +59,7 @@ public enum EditorItems {
     CONFIG_EDITOR_NAMEABLE(CONFIG_EDITOR_NAMEABLE(), "Nameable", "config", EditorExpectationType.BOOLEAN, null, true),
     CONFIG_EDITOR_MOUNTABLE(CONFIG_EDITOR_MOUNTABLE(), "Mountable", "config", EditorExpectationType.BOOLEAN, null, true),
     CONFIG_EDITOR_DISTANCE_TELEPORT(CONFIG_EDITOR_DISTANCE_TELEPORT(), "DistanceTeleport", "config", EditorExpectationType.FLOAT, null, true),
-    CONFIG_EDITOR_MAX_NAME_LENGTH(CONFIG_EDITOR_MAX_NAME_LENGTH(), "MaxNameLenght", "config", EditorExpectationType.INT, null, true),
+    CONFIG_EDITOR_MAX_NAME_LENGTH(CONFIG_EDITOR_MAX_NAME_LENGTH(), "MaxNameLength", "config", EditorExpectationType.INT, null, true),
     CONFIG_EDITOR_INVENTORY_SIZE(CONFIG_EDITOR_INVENTORY_SIZE(), "InventorySize", "config", EditorExpectationType.INT, null, true),
     CONFIG_EDITOR_ENABLE_CLICK_BACK_TO_MENU(CONFIG_EDITOR_ENABLE_CLICK_BACK_TO_MENU(), "EnableClickBackToMenu", "config", EditorExpectationType.BOOLEAN, null, true),
     CONFIG_EDITOR_ACTIVATE_BACK_MENU_ICON(CONFIG_EDITOR_ACTIVATE_BACK_MENU_ICON(), "ActivateBackMenuIcon", "config", EditorExpectationType.BOOLEAN, null, true),
@@ -348,6 +348,9 @@ public enum EditorItems {
         if (it.getType().equals(Material.FILLED_MAP))
             it.setType(Material.MAP);
         PDCTag.set(meta, editorTag + getId());
+        // Apply the tag now: EditorText.localize reads a fresh ItemMeta copy, and
+        // without this the editor PDC identity would be lost when it writes back.
+        it.setItemMeta(meta);
 
         // Basically, we are replacing the placeholder for the value within the lores
         final List<String> lores = meta.getLore();
@@ -387,18 +390,27 @@ public enum EditorItems {
             }
         }
 
-        if (resetable) {
-            newLores.add(" ");
-            newLores.add("§cSHIFT + click§7 to §creset§7 the value.");
+        final boolean hasValue = lores != null && lores.stream().anyMatch(lore -> lore.contains("%value%"));
+        final ItemMeta renderMeta;
+        if (EditorText.shouldLocalize(it)) {
+            // localize() installs a new meta copy on the stack; re-read it so the
+            // item flags below do not overwrite the Chinese name and lore.
+            EditorText.localize(it, hasValue, value, type, resetable);
+            renderMeta = it.getItemMeta();
+        } else {
+            if (resetable) {
+                newLores.add(" ");
+                newLores.add("§cSHIFT + click§7 to §creset§7 the value.");
+            }
+            meta.setLore(newLores);
+            renderMeta = meta;
         }
 
-        meta.setLore(newLores);
-
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        meta.addItemFlags(ItemFlag.HIDE_PLACED_ON);
-        meta.addItemFlags(ItemFlag.HIDE_DYE);
-        meta.addItemFlags(ItemFlag.HIDE_DESTROYS);
-        it.setItemMeta(meta);
+        renderMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        renderMeta.addItemFlags(ItemFlag.HIDE_PLACED_ON);
+        renderMeta.addItemFlags(ItemFlag.HIDE_DYE);
+        renderMeta.addItemFlags(ItemFlag.HIDE_DESTROYS);
+        it.setItemMeta(renderMeta);
         return it;
     }
 
@@ -665,7 +677,7 @@ public enum EditorItems {
     private static ItemStack CONFIG_EDITOR_MOUNTABLE() {
         final ItemStack it = new ItemStack(Material.KNOWLEDGE_BOOK);
         final ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§6Override default name");
+        meta.setDisplayName("§6Default mountable");
 
         final ArrayList<String> lores = new ArrayList<>();
         lores.add(" ");
@@ -836,7 +848,7 @@ public enum EditorItems {
     private static ItemStack CONFIG_EDITOR_GLOBAL_RESPAWN_COOLDOWN() {
         final ItemStack it = new ItemStack(Material.KNOWLEDGE_BOOK);
         final ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§6Global respawn cooldown");
+        meta.setDisplayName("§6Enable global respawn cooldown");
 
         final ArrayList<String> lores = new ArrayList<>();
         lores.add(" ");

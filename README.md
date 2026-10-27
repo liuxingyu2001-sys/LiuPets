@@ -8,77 +8,78 @@
 > - 联动：`Liupass`（喂食/驯服/升级进度）、`mcSkills`（目标过滤与宠物伤害保护）；宠物中心只保留宠物功能，不再内置商城/战令等快捷入口。
 > - 联动配置：`plugins/LiuPets/integrations.yml`。
 > - 旧数据迁移：首次启动会自动把 `plugins/MCPets/` 复制到 `plugins/LiuPets/`，原目录保留作为备份。
-> - 若 `language.yml` 仍为旧版英文，删除该文件后重载即可生成默认中文文本。
+> - 旧版英文 `language.yml` 会在重载时自动回退为中文默认文本，自定义中文文本会保留；如需完全重置可删除该文件后重载。
+> - `/liupets editor` 配置编辑器的菜单标题、物品名称、说明与输入提示均已中文化；新增语言键会自动补齐，不会覆盖已有自定义文本。
 
 <img src="https://i.ibb.co/7RYYYZb/spigot-mcpets-banner.png" alt="MC Pets logo">
 
-Welcome to MC Pets!
+# LiuPets
 
-Navigate through the [wiki pages](https://mcpets.gitbook.io/mcpets/) to find whatever information you need about the plugin.
-Looking for help ? Join the [Discord](https://discord.com/invite/p7QTm2gUyf) !
+LiuPets 是 MCPets 的中文分支，面向中文服务器提供完整的宠物、坐骑与养成体验。插件依赖 MythicMobs 提供生物与技能，并使用 ModelEngine 或 BetterModel 渲染 3D 模型。
+
+需要了解完整配置与玩法时，可查阅 [MCPets Wiki](https://mcpets.gitbook.io/mcpets/)；遇到问题可加入 [Discord](https://discord.com/invite/p7QTm2gUyf)。
 
 <img src="https://i.imgur.com/saPEOAJ.png" alt="Requirements">
 
-✨ Check the [requirements on the Wiki](https://mcpets.gitbook.io/mcpets/common-issues/common-issues/requirements).
+✨ 运行环境与依赖请查看 [Wiki 要求页面](https://mcpets.gitbook.io/mcpets/common-issues/common-issues/requirements)。
 
 <img src="https://i.imgur.com/KadwjCO.png" alt="Features">
 
-⭕ **3D modeled pets** with ANY behavior, skills, effects and more based on MythicMobs and ModelEngine
+⭕ 基于 MythicMobs 与 ModelEngine 的 **3D 宠物**，支持任意行为、技能与特效
 
-⭕ Create **mounts** using ModelEngine and implement them easily with MCPets
+⭕ 使用 ModelEngine 创建 **坐骑**，并通过 MCPets 快速配置与召唤
 
-⭕ Unique **inventory** per pet
+⭕ 每只宠物拥有独立的 **背包**
 
-⭕ **Pet statistics** with MCPets 3.0.0 : experience, health, damage modifiers for skills and more
+⭕ **宠物养成属性**：经验、生命、技能伤害倍率等
 
-⭕ **Taming**, **evolutions** and **pet food** system with MCPets 3.0.0
+⭕ **驯服**、**进化** 与 **宠物食物** 系统
 
-⭕ Customizable **in-game GUI interface** : summon pets, show their stats, custom names, mount, skins, inventory... Organizable in categories
+⭕ 可自定义的 **游戏内 GUI**：召唤宠物、查看属性、改名、骑乘、外观、背包，并可按分类整理
 
-⭕ **Give orders** to your pets using the Signal Stick
+⭕ 使用 **指挥棒** 向宠物下达指令
 
-⭕ Permission-based system and **customizable permission for each pet**, showing the pet or not in the GUI depending on the player having the permission for it
+⭕ 基于权限的解锁系统，可为每只宠物配置 **独立权限**，按玩家权限决定是否在 GUI 中显示
 
-⭕ **Flags** to manage pet interactions with WorldGuard
+⭕ **WorldGuard 旗标**，控制宠物与区域之间的交互
 
-⭕ MySQL support
+⭕ 支持 MySQL 存储
 
-⭕ **Velocity cross-server pet sync** — active pets follow players seamlessly between servers on a Velocity network *(see [mcpets-velocity/README.md](mcpets-velocity/README.md))*
+⭕ **Velocity 跨服宠物同步**：玩家在 Velocity 网络内切换服务器时，已召唤的宠物会无缝跟随（详见 [mcpets-velocity/README.md](mcpets-velocity/README.md)）
 
-✨ Need a demo pet to start with ? Check out [Sleepy the Otter](https://mcmodels.net/products/11051/sleepy-the-otter) !
+✨ 想先体验示例宠物？可以看看 [Sleepy the Otter](https://mcmodels.net/products/11051/sleepy-the-otter)！
 
 ---
 
-## Velocity Cross-Server Sync
+## Velocity 跨服同步
 
-This fork adds a companion Velocity proxy plugin (`mcpets-velocity/`) that keeps a player's active pet consistent across all synced servers in your network.
+本分支附带一个独立的 Velocity 代理端插件（`mcpets-velocity/`），用于让玩家的已召唤宠物在所有已同步的服务器之间保持一致。
 
-**How it works:**
-- When a player switches to a synced server, their active pet is saved to the shared MySQL database and automatically spawned on the destination server
-- Revoking a pet on any server clears the record network-wide — no ghost spawns
-- Only servers listed under `synced-servers` in the Velocity config participate; all other servers are unaffected
+**工作原理：**
+- 玩家切换到已同步的服务器时，当前宠物会保存到共享 MySQL 数据库，并在目标服务器自动召唤
+- 在任意服务器收回宠物都会清理全网记录，避免出现“幽灵宠物”
+- 只有 Velocity 配置中 `synced-servers` 列出的服务器参与同步，其他服务器不受影响
 
-**Quick setup:**
-1. Enable MySQL in MCPets and point all synced servers at the same database
-2. Set `Velocity.Enabled: true` in MCPets `config.yml` on each synced server
-3. Drop `MCPets-Velocity-<version>.jar` into your Velocity proxy's `plugins/` folder
-4. Configure which servers to sync in `plugins/mcpets-velocity/config.yml` on the proxy
+**快速配置：**
+1. 在 MCPets 中启用 MySQL，并让所有需要同步的服务器连接同一个数据库
+2. 在每台已同步服务器的 `config.yml` 中设置 `Velocity.Enabled: true`
+3. 把 `MCPets-Velocity-<version>.jar` 放入 Velocity 代理端的 `plugins/` 目录
+4. 在代理端 `plugins/mcpets-velocity/config.yml` 中配置需要同步的服务器
 
-See [mcpets-velocity/README.md](mcpets-velocity/README.md) for full setup instructions and configuration options.
+完整安装步骤与配置项见 [mcpets-velocity/README.md](mcpets-velocity/README.md)。
 
 ---
 
 <img src="https://i.ibb.co/Sn460M4/patreon-advantages.png" alt="Patreon advantages">
 
-⭕ Download some exclusive content and monthly releases on the [Patreon](https://www.patreon.com/tofnocsy_workshop)
+⭕ 在 [Patreon](https://www.patreon.com/tofnocsy_workshop) 获取独家内容与每月更新
 
-⭕ Get involved in the creation progress by picking your favorite model in a monthly selection
+⭕ 参与每月模型投票，选择你喜欢的模型加入制作计划
 
-⭕ Access a patron-only channel on my [Discord's workshop](https://discord.gg/p7QTm2gUyf)
+⭕ 加入 [Discord 工坊](https://discord.gg/p7QTm2gUyf) 的赞助者专属频道
 
-# ✨ Partner ✨
+# ✨ 合作伙伴 ✨
 
-Download more pets on [MCModels.net](https://mcmodels.net/)
+在 [MCModels.net](https://mcmodels.net/) 下载更多宠物模型
 
 ![image](https://cdn.discordapp.com/attachments/884364895108366336/909534639650136064/partnered.png)
-

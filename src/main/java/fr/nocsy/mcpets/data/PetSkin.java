@@ -177,9 +177,9 @@ public class PetSkin {
     private void initIcon() {
         icon = Items.UNKNOWN.getItem().clone();
         ItemMeta meta = icon.getItemMeta();
-        meta.setDisplayName("§6Skin §7: " + mythicMobId);
+        meta.setDisplayName("§6外观 §7: " + mythicMobId);
         ArrayList<String> lore = new ArrayList<>();
-        lore.add("§7Click to apply that skin");
+        lore.add("§7点击应用此外观");
         meta.setLore(lore);
         icon.setItemMeta(meta);
         prepareIcon();

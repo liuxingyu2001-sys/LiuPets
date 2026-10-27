@@ -49,7 +49,7 @@ public enum Language {
     TYPE_NAME_IN_CHAT("§a请在聊天栏输入宠物的新名字，输入 §e取消 §a可退出。"),
     IF_WISH_TO_REMOVE_NAME("§7输入 §e%tag% §7可恢复默认名字。"),
     NICKNAME_CHANGED_SUCCESSFULY("§a宠物名字已更新！"),
-    NICKNAME_NOT_CHANGED("§c名字不能为空或超过 32 个字符，请重新操作。"),
+    NICKNAME_NOT_CHANGED("§c名字不能为空或超过 %max% 个字符，请重新操作。"),
     TAG_TO_REMOVE_NAME("清除"),
     ALREADY_INSIDE_VEHICULE("§c请先离开当前载具，再骑乘宠物。"),
     PET_DOESNT_EXIST("§c这只宠物不存在，请检查宠物 ID。"),
@@ -110,7 +110,41 @@ public enum Language {
     MAX_ACTIVE_PETS_REACHED("§c同时召唤的宠物数量已达上限。"),
     PET_REPLACED_BY_NEW("§e已用 %newpet% 替换 %oldpet%。"),
     DEBUGGER_JOINING("§a已开启宠物调试信息。"),
-    DEBUGGER_LEAVE("§7已关闭宠物调试信息。");
+    DEBUGGER_LEAVE("§7已关闭宠物调试信息。"),
+
+    CANCEL_RENAME("§7已取消宠物改名。"),
+    EDITOR_PROMPT_VALUE("§a请在聊天栏输入「§e%field%§a」的新值。"),
+    EDITOR_PROMPT_LIST("§e多个值用英文逗号分隔，例如：§6SPELL,SHIELD"),
+    EDITOR_PROMPT_QUIT("§a输入 §c取消 §a可放弃本次修改。"),
+    EDITOR_CANCELLED("§c已取消修改，原值保持不变。"),
+    EDITOR_VALUE_CHANGED("§a「§e%field%§a」已更新。"),
+    EDITOR_RELOAD_HINT("§a请执行 §e/liupets reload §a使修改生效。"),
+    EDITOR_INTERRUPTED("§c插件已重载，编辑器会话已中断。"),
+    EDITOR_MYTHICMOB_INVALID("§c找不到 MythicMob §e%value%§c，请检查生物配置。"),
+    EDITOR_SKILL_INVALID("§c找不到技能 §e%value%§c，请检查技能配置。"),
+    EDITOR_PET_ALREADY_EXISTS("§c宠物 §e%value%§c 已存在，请使用其他 ID。"),
+    EDITOR_EXPECTED_TYPE("§c该参数应为 §6%type% §c类型。"),
+    EDITOR_RETRY("§c请重新输入正确的值。"),
+    EDITOR_POSSIBLE_ITEMS("§b可用物品 ID："),
+    EDITOR_POSSIBLE_PETS("§b可用宠物 ID："),
+    EDITOR_POSSIBLE_OPERATORS("§b可用运算符："),
+    EDITOR_POSSIBLE_MOUNT_TYPES("§b可用坐骑类型：§7walking、flying"),
+    EDITOR_POSSIBLE_ANNOUNCEMENTS("§b可用公告类型："),
+    EDITOR_POSSIBLE_FOOD_TYPES("§b可用宠物食物类型："),
+    EDITOR_DELETE_WARNING("§c§l警告：§7确定要删除吗？再次 §cShift + 左键§7 确认。"),
+    EDITOR_PET_DELETED("§c已删除宠物 §e%pet%§c。"),
+    EDITOR_SAVED("§a修改已保存，请执行 §e/liupets reload §a生效。"),
+    EDITOR_RESET("§a该配置已重置，请执行 §e/liupets reload §a生效。"),
+    COMMAND_INCOMPLETE("§c参数不完整，用法：§e%usage%"),
+    COMMAND_UNLOCK_USAGE("§e/liupets unlock <在线玩家或UUID> <宠物ID>"),
+    COMMAND_UNLOCK_NO_PLAYER("§c玩家不在线，请使用玩家 UUID。"),
+    COMMAND_UNLOCK_FAILED("§c解锁失败：%reason%"),
+    COMMAND_UNLOCK_SUCCESS("§a已永久解锁宠物：§e%pet%"),
+    COMMAND_UNLOCK_TARGET("§a已获得新宠物！使用 §e/liupets §a查看。"),
+    COMMAND_HELP_ADMIN("§e/liupets reload §7重载\n§e/liupets editor §7配置编辑器\n§e/liupets unlock <玩家或UUID> <宠物ID> §7永久解锁（LuckPerms）"),
+    INVALID_AMOUNT("§c数量无效。"),
+    AMOUNT_POSITIVE("§c数量必须大于 0。"),
+    ITEM_KEY_ENTRY("§8- §7%keys%");
 
     private String message;
 
@@ -119,9 +153,20 @@ public enum Language {
     }
 
     public void reload() {
-        if (LanguageConfig.getInstance().getMap().containsKey(name().toLowerCase())) {
-            message = LanguageConfig.getInstance().getMap().get(name().toLowerCase());
-        }
+        final String configured = LanguageConfig.getInstance().getMap().get(name().toLowerCase());
+        if (configured == null)
+            return;
+
+        // Never let an old upstream English language.yml silently keep the UI in English.
+        // Custom text containing Chinese is preserved; blank values can still disable a message.
+        if (!configured.isBlank() && !containsChinese(configured))
+            return;
+
+        message = configured;
+    }
+
+    private static boolean containsChinese(final String text) {
+        return text.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp) == Character.UnicodeScript.HAN);
     }
 
     public String getMessage() {

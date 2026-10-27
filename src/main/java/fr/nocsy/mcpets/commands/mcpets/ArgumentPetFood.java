@@ -13,7 +13,7 @@ import fr.nocsy.mcpets.data.livingpets.PetFood;
 public class ArgumentPetFood extends AArgument {
 
     public ArgumentPetFood(CommandSender sender, String[] args) {
-        super("petFood", new int[]{2, 3, 4}, sender, args, "/mcpets petFood <id> [player] [amount]");
+        super("petFood", new int[]{2, 3, 4}, sender, args, "/mcpets petFood <宠物食物ID> [玩家] [数量]");
     }
 
     @Override
@@ -68,7 +68,7 @@ public class ArgumentPetFood extends AArgument {
                 try {
                     amount = Integer.parseInt(args[3]);
                 } catch (NumberFormatException ex) {
-                    sender.sendMessage("§cInvalid amount.");
+                    Language.INVALID_AMOUNT.sendMessage(sender);
                     return;
                 }
             }
@@ -79,7 +79,7 @@ public class ArgumentPetFood extends AArgument {
         }
 
         if (amount < 1) {
-            sender.sendMessage("§cAmount must be greater than 0.");
+            Language.AMOUNT_POSITIVE.sendMessage(sender);
             return;
         }
 

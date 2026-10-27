@@ -116,7 +116,7 @@ public class MCPets extends JavaPlugin {
         PetStats.saveStats();
         if (GlobalConfig.getInstance().isVelocityEnabled()) {
             VelocitySyncManager.init();
-            getLog().info("[MCPets] : Velocity sync enabled.");
+            getLog().info("[MCPets]：跨服 Velocity 同步已启用。");
         }
     }
 
@@ -133,12 +133,12 @@ public class MCPets extends JavaPlugin {
         modeler = null;
 
         if (!checkMythicMobs()) {
-            getLog().severe("MCPets could not be loaded : MythicMobs could not be found or this version is not compatible with the plugin.");
+            getLog().severe("LiuPets 加载失败：未找到 MythicMobs，或当前版本与插件不兼容。");
             return;
         }
 
         if (!checkModeler()) {
-            getLog().severe("MCPets could not be loaded : Neither ModelEngine nor BetterModel could be found.");
+            getLog().severe("LiuPets 加载失败：未找到 ModelEngine 或 BetterModel。");
             return;
         }
 
@@ -148,7 +148,7 @@ public class MCPets extends JavaPlugin {
         checkNexo();
         checkItemsAdder();
         if (!nexoFound && !itemsAdderFound) {
-            getLog().info("Neither Nexo nor ItemsAdder were found. Custom items features won't be available.");
+            getLog().info("未找到 Nexo 或 ItemsAdder，自定义物品功能将不可用。");
         }
 
         try {
@@ -156,7 +156,7 @@ public class MCPets extends JavaPlugin {
                 FlagsManager.init(this);
             }
         } catch (final Exception ex) {
-            getLog().log(Level.SEVERE, "Flag manager has raised an exception", ex);
+            getLog().log(Level.SEVERE, "WorldGuard 旗标管理器发生异常", ex);
         }
     }
 
@@ -183,8 +183,8 @@ public class MCPets extends JavaPlugin {
                     .registerCustomComponent(CustomComponentRegistry.MythicComponentType.TARGETER, TARGETER_PACKAGE)
                     .registerCustomComponent(CustomComponentRegistry.MythicComponentType.MECHANIC, MECHANIC_PACKAGE);
 
-            getLog().info("-=-=-=-= MCPets loaded =-=-=-=-");
-            getLog().info("      Plugin made by Nocsy     ");
+            getLog().info("-=-=-=-= LiuPets 已加载 =-=-=-=-");
+            getLog().info("      基于 Nocsy 的 MCPets 开发      ");
             getLog().info("-=-=-=-= -=-=-=-=-=-=- =-=-=-=-");
 
             FlagsManager.launchFlags();
@@ -196,7 +196,7 @@ public class MCPets extends JavaPlugin {
         if (placeholderAPI != null) placeholderAPI.unregister();
         PetInteractionMenuCleanup();
         getLog().info("LiuPets 已关闭，正在保存宠物数据。");
-        getLog().info("          See you soon           ");
+        getLog().info("          期待下次再见          ");
         getLog().info("-=-=-=-= -=-=-=-=-=-=-=- =-=-=-=-");
 
         // Cancel pending editor conversations before the JAR is unloaded to avoid
@@ -290,7 +290,7 @@ public class MCPets extends JavaPlugin {
         } catch (final NoClassDefFoundError error) {
             if (!luckPermsNotFound) {
                 luckPermsNotFound = true;
-                getLog().warning("LuckPerms could not be found. Some features relating to giving permissions won't be available.");
+                getLog().warning("未找到 LuckPerms，部分权限发放功能将不可用。");
             }
         }
     }
@@ -303,7 +303,7 @@ public class MCPets extends JavaPlugin {
             Class.forName("com.nexomc.nexo.api.NexoItems");
             nexoFound = true;
             if (!nexoChecked) {
-                getLog().info("Nexo found. Nexo Custom items features are available.");
+                getLog().info("已找到 Nexo，可使用 Nexo 自定义物品功能。");
             }
         } catch (final ClassNotFoundException e) {
             nexoFound = false;
@@ -311,7 +311,7 @@ public class MCPets extends JavaPlugin {
             // Handle cases like zip file closed during plugin reload
             nexoFound = false;
             if (!nexoChecked) {
-                getLog().warning("Could not check for Nexo (" + e.getClass().getSimpleName() + "). Nexo Custom items features won't be available.");
+                getLog().warning("检查 Nexo 时发生异常（" + e.getClass().getSimpleName() + "），Nexo 自定义物品功能将不可用。");
             }
         } finally {
             nexoChecked = true;
@@ -339,7 +339,7 @@ public class MCPets extends JavaPlugin {
                 GlobalConfig.getInstance().setWorldGuardSupport(true);
         } catch (final NoClassDefFoundError error) {
             GlobalConfig.getInstance().setWorldGuardSupport(false);
-            getLog().warning("WorldGuard could not be found. Flags won't be available.");
+            getLog().warning("未找到 WorldGuard，区域旗标功能将不可用。");
         }
     }
 
@@ -356,7 +356,7 @@ public class MCPets extends JavaPlugin {
                 return true;
             }
         } catch (final NoClassDefFoundError error) {
-            getLog().warning("MythicMobs could not be found.");
+            getLog().warning("未找到 MythicMobs。");
         }
 
         return false;
@@ -372,7 +372,7 @@ public class MCPets extends JavaPlugin {
         try {
             Class.forName("kr.toxicity.model.api.BetterModel");
             modeler = new BetterModelModeler();
-            getLog().info("BetterModel found. Using BetterModel as modeler.");
+            getLog().info("已找到 BetterModel，使用 BetterModel 作为模型后端。");
             return true;
         } catch (final ClassNotFoundException ignored) {}
 
@@ -380,7 +380,7 @@ public class MCPets extends JavaPlugin {
         try {
             Class.forName("com.ticxo.modelengine.api.ModelEngineAPI");
             modeler = new ModelEngineModeler();
-            getLog().info("ModelEngine found. Using ModelEngine as modeler.");
+            getLog().info("已找到 ModelEngine，使用 ModelEngine 作为模型后端。");
             return true;
         } catch (final ClassNotFoundException ignored) {}
 

@@ -53,8 +53,8 @@ public class BetterModelModeler implements AbstractModeler {
                         .canBeDamagedByRider(false)
                         .build());
                 hitBox.mount(new BukkitEntity(rider));
-                Debugger.send("§a[BetterModel] Mounted " + rider.getName()
-                        + " on pet " + petUUID + " via HitBox (controller: " + base.name() + ")");
+                Debugger.send("§a[BetterModel] 已骑乘 " + rider.getName()
+                        + " 到宠物 " + petUUID + "（HitBox 控制器：" + base.name() + "）");
                 return true;
             }
         }
@@ -64,8 +64,8 @@ public class BetterModelModeler implements AbstractModeler {
         if (petEntity == null)
             return false;
         petEntity.addPassenger(rider);
-        Debugger.send("§e[BetterModel] Mounted " + rider.getName()
-                + " on pet " + petUUID + " via vanilla fallback (no HitBox found)");
+        Debugger.send("§e[BetterModel] 已骑乘 " + rider.getName()
+                + " 到宠物 " + petUUID + "（原版回退，未找到 HitBox）");
         return true;
     }
 
@@ -89,8 +89,8 @@ public class BetterModelModeler implements AbstractModeler {
             EntityTrackerRegistry.MountedHitBox mounted = registry.mountedHitBox().get(rider.getUniqueId());
             if (mounted != null) {
                 mounted.dismount();
-                Debugger.send("§a[BetterModel] Dismounted " + rider.getName()
-                        + " from pet " + petUUID + " via HitBox");
+                Debugger.send("§a[BetterModel] 已让 " + rider.getName()
+                        + " 从宠物 " + petUUID + " 下坐骑（HitBox）");
                 return;
             }
         }
@@ -108,7 +108,7 @@ public class BetterModelModeler implements AbstractModeler {
             for (EntityTrackerRegistry.MountedHitBox mounted : registry.mountedHitBox().values()) {
                 mounted.dismountAll();
             }
-            Debugger.send("§a[BetterModel] Dismounted all riders from pet " + petUUID);
+            Debugger.send("§a[BetterModel] 已让宠物 " + petUUID + " 的所有骑手下来");
             return;
         }
         // Fallback to vanilla
@@ -124,7 +124,7 @@ public class BetterModelModeler implements AbstractModeler {
         if (registry == null)
             return;
         registry.close();
-        Debugger.send("§a[BetterModel] Removed model for pet " + petUUID);
+        Debugger.send("§a[BetterModel] 已移除宠物 " + petUUID + " 的模型");
     }
 
     @Override
@@ -139,7 +139,7 @@ public class BetterModelModeler implements AbstractModeler {
                 return new BetterModelNameTag(bone.getNametag());
             }
         }
-        Debugger.send("§e[BetterModel] No nametag bone found for pet " + petUUID);
+        Debugger.send("§e[BetterModel] 宠物 " + petUUID + " 未找到名牌骨骼");
         return null;
     }
 

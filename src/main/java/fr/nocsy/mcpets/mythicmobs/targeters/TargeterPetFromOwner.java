@@ -30,13 +30,13 @@ public class TargeterPetFromOwner extends IEntitySelector {
     public Collection<AbstractEntity> getEntities(SkillMetadata metadata) {
         AbstractEntity caster = metadata.getCaster().getEntity();
         if (!(caster instanceof BukkitPlayer)) {
-            Debugger.send("Targeter @PetFromOwner called with unknown caster type: " + caster.getClass().getName());
+            Debugger.send("目标选择器 @PetFromOwner 收到未知施法者类型：" + caster.getClass().getName());
             return Collections.emptySet();
         }
 
         List<Pet> pets = Pet.getActivePetsForOwner(caster.getUniqueId());
         if (pets.isEmpty()) {
-            Debugger.send("Targeter @PetFromOwner found no pets for owner " + caster.getUniqueId());
+            Debugger.send("目标选择器 @PetFromOwner 未找到主人 " + caster.getUniqueId() + " 的宠物");
             return Collections.emptySet();
         }
 
@@ -49,7 +49,7 @@ public class TargeterPetFromOwner extends IEntitySelector {
 
             entities.add(pet.getActiveMob().getEntity());
 
-            Debugger.send("Targeter @PetFromOwner found pet " + pet.getId() + " for owner " + caster.getUniqueId());
+            Debugger.send("目标选择器 @PetFromOwner 找到主人 " + caster.getUniqueId() + " 的宠物 " + pet.getId());
         }
 
         return entities;

@@ -18,7 +18,7 @@ import java.util.UUID;
 public class ArgumentInventory extends AArgument {
 
     public ArgumentInventory(CommandSender sender, String[] args) {
-        super("inventory", new int[]{3}, sender, args, "/mcpets inventory <player> <petId>");
+        super("inventory", new int[]{3}, sender, args, "/mcpets inventory <玩家> <宠物ID>");
     }
 
     @Override

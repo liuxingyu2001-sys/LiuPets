@@ -41,12 +41,12 @@ public class EvolvePetMechanic extends SkillMechanic implements ITargetedEntityS
         Pet pet = Pet.getFromEntity(entity);
         Pet evolution = Pet.getFromId(evolutionId);
 
-        Debugger.send("§6[Evolution Mechanic]:");
+        Debugger.send("§6[进化机制]：");
         if (pet != null) {
-            Debugger.send("§7- pet: §a" + pet.getId() + "§7 has pet stats ? §a" + (pet.getPetStats() != null));
+            Debugger.send("§7- 宠物：§a" + pet.getId() + "§7 是否有养成属性？§a" + (pet.getPetStats() != null));
         }
 
-        Debugger.send("§7- evolution: §a" + evolutionId + " exists ? §a" + (evolution != null));
+        Debugger.send("§7- 进化目标：§a" + evolutionId + " 是否存在？§a" + (evolution != null));
 
         if (evolution != null && pet != null && pet.getPetStats() != null) {
             Bukkit.getScheduler().runTask(

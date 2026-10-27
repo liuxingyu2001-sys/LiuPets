@@ -72,7 +72,7 @@ public class VelocitySyncManager implements PluginMessageListener {
                 pendingSwitchPlayers.put(uuid, System.currentTimeMillis());
             }
         } catch (IOException | IllegalArgumentException e) {
-            MCPets.getLog().warning("[MCPets/Velocity] Bad plugin message: " + e.getMessage());
+            MCPets.getLog().warning("[MCPets/Velocity] 无效的插件消息：" + e.getMessage());
         }
     }
 

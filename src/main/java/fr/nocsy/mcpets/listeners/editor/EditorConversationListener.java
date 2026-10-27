@@ -2,7 +2,9 @@ package fr.nocsy.mcpets.listeners.editor;
 
 import fr.nocsy.mcpets.MCPets;
 import fr.nocsy.mcpets.data.Pet;
+import fr.nocsy.mcpets.data.config.FormatArg;
 import fr.nocsy.mcpets.data.config.ItemsListConfig;
+import fr.nocsy.mcpets.data.config.Language;
 import fr.nocsy.mcpets.data.editor.*;
 import fr.nocsy.mcpets.data.livingpets.PetFoodType;
 import fr.nocsy.mcpets.utils.PetAnnouncement;
@@ -60,19 +62,20 @@ public class EditorConversationListener implements Listener {
         // If the output type isn't respected, ask for another one.
         if (!conversation.entryMatch(entry)) {
             if (conversation.getEditorItem().getType().equals(EditorExpectationType.MYTHICMOB)) {
-                p.sendMessage("§cThe mythicmob §e" + entry + "§c does not exist. Check your MythicMob mob file to obtain the right ID.");
+                Language.EDITOR_MYTHICMOB_INVALID.sendMessageFormatted(p, new FormatArg("%value%", entry));
             }
             else if (conversation.getEditorItem().getType().equals(EditorExpectationType.SKILL)) {
-                p.sendMessage("§cThe skill §e" + entry + "§c does not exist. Check your MythicMob skills to obtain the right ID.");
+                Language.EDITOR_SKILL_INVALID.sendMessageFormatted(p, new FormatArg("%value%", entry));
             }
             else if (conversation.getEditorItem().getType().equals(EditorExpectationType.PET_CREATE)) {
-                p.sendMessage("§cThe pet §e" + entry + "§c already exists. Please use another ID.");
+                Language.EDITOR_PET_ALREADY_EXISTS.sendMessageFormatted(p, new FormatArg("%value%", entry));
             }
             else {
-                p.sendMessage("§cThe expected type for this parameter is §6" + conversation.getEditorItem().getType().getName().replace("_", " "));
-                p.sendMessage("§cPlease try again with the right type.");
+                Language.EDITOR_EXPECTED_TYPE.sendMessageFormatted(p,
+                        new FormatArg("%type%", EditorText.typeName(conversation.getEditorItem().getType())));
+                Language.EDITOR_RETRY.sendMessage(p);
                 if (conversation.getEditorItem().getType().equals(EditorExpectationType.ITEM_ID_OR_MATERIAL)) {
-                    p.sendMessage("§bPossible items id are:");
+                    Language.EDITOR_POSSIBLE_ITEMS.sendMessage(p);
                     p.sendMessage("§7" + ItemsListConfig.getInstance().getItems().keySet());
                 }
                 else if (conversation.getEditorItem().getType().equals(EditorExpectationType.PET_ID) ||
@@ -80,23 +83,22 @@ public class EditorConversationListener implements Listener {
                         conversation.getEditorItem().getType().equals(EditorExpectationType.PETFOOD_PET_LIST_REMOVE) ||
                         conversation.getEditorItem().getType().equals(EditorExpectationType.CATEGORY_PET_LIST_ADD) ||
                         conversation.getEditorItem().getType().equals(EditorExpectationType.CATEGORY_PET_LIST_REMOVE)) {
-                    p.sendMessage("§bPossible pet ids are:");
+                    Language.EDITOR_POSSIBLE_PETS.sendMessage(p);
                     p.sendMessage("§7" + Pet.getObjectPets().stream().map(Pet::getId).toList());
                 }
                 else if (conversation.getEditorItem().getType().equals(EditorExpectationType.OPERATOR_TYPE) ) {
-                    p.sendMessage("§bPossible operators are:");
+                    Language.EDITOR_POSSIBLE_OPERATORS.sendMessage(p);
                     p.sendMessage("§7" + Arrays.toString(PetMath.values()));
                 }
                 else if (conversation.getEditorItem().getType().equals(EditorExpectationType.MOUNT_TYPE) ) {
-                    p.sendMessage("§bPossible mount types are:");
-                    p.sendMessage("§7[walking, flying]");
+                    Language.EDITOR_POSSIBLE_MOUNT_TYPES.sendMessage(p);
                 }
                 else if (conversation.getEditorItem().getType().equals(EditorExpectationType.ANNOUNCEMENT_TYPE)) {
-                    p.sendMessage("§bPossible announcement types are:");
+                    Language.EDITOR_POSSIBLE_ANNOUNCEMENTS.sendMessage(p);
                     p.sendMessage("§7" + Arrays.toString(PetAnnouncement.values()));
                 }
                 else if (conversation.getEditorItem().getType().equals(EditorExpectationType.PETFOOD_TYPE)) {
-                    p.sendMessage("§bPossible pet food types are:");
+                    Language.EDITOR_POSSIBLE_FOOD_TYPES.sendMessage(p);
                     p.sendMessage("§7" + Arrays.toString(PetFoodType.values()));
                 }
             }

@@ -307,7 +307,7 @@ public class GlobalConfig extends AbstractConfig {
         velocityEnabled = getConfig().getBoolean("Velocity.Enabled");
         velocitySwitchWindow = Math.max(5, Math.min(300, getConfig().getInt("Velocity.SwitchWindow")));
         if (velocityEnabled && !databaseSupport) {
-            MCPets.getLog().warning("[MCPets] : Velocity is enabled but DatabaseSupport is disabled. Cross-server pet sync requires database support.");
+            MCPets.getLog().warning("[MCPets]：已启用 Velocity 跨服同步，但未启用数据库支持；跨服同步需要数据库。");
         }
 
         spawnPetAfterServerRestart = getConfig().getBoolean("SpawnPetAfterServerRestart");

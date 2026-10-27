@@ -106,9 +106,9 @@ public class PetStats {
                 Player p = Bukkit.getPlayer(pet.getOwner());
                 if (p != null && Pet.getActivePets().get(pet.getOwner()) == null) {
                     pet.spawn(p.getLocation(), true);
-                    Debugger.send("§aPet §6" + pet.getId() + "§a was autorespawned after death.");
+                    Debugger.send("§a宠物 §6" + pet.getId() + "§a 死亡后已自动复活。");
                 } else {
-                    Debugger.send("§cPet §6" + pet.getId() + "§c was supposed to autorespawn, but the player already has a spawned pet with him, or is disconnected.");
+                    Debugger.send("§c宠物 §6" + pet.getId() + "§c 本应自动复活，但玩家已召唤了其他宠物或已离线。");
                 }
             }
         });
@@ -281,14 +281,14 @@ public class PetStats {
 
         // add the experience to the pet
         experience = experience + event.getExperience();
-        Debugger.send("§7adding " + experience + "xp to the pet " + pet.getId());
+        Debugger.send("§7正在为宠物 " + pet.getId() + " 增加 " + experience + " 点经验");
 
         // Look if there's a level up to perform
         PetLevel nextLevel = getNextLevel();
         boolean levelUp = false;
         while (!nextLevel.equals(currentLevel) && nextLevel.getExpThreshold() <= experience) {
             if (nextLevel.getEvolutionId() != null && !nextLevel.canEvolve(pet.getOwner(), Pet.getFromId(nextLevel.getEvolutionId()))) {
-                Debugger.send("Pet §6" + pet.getId() + "§7 can not evolve into §a" + nextLevel.getEvolutionId() + "§7 because the player already owns the evolution.");
+                Debugger.send("宠物 §6" + pet.getId() + "§7 无法进化为 §a" + nextLevel.getEvolutionId() + "§7，因为玩家已拥有该进化形态。");
                 if (experience == nextLevel.getExpThreshold() - 1 + event.getExperience()) {
                     experience = nextLevel.getExpThreshold() - 1;
                     return false;
@@ -297,7 +297,7 @@ public class PetStats {
                     break;
                 }
             }
-            Debugger.send("§aPet §7" + pet.getId() + "§a is leveling up to §6" + nextLevel.getLevelName());
+            Debugger.send("§a宠物 §7" + pet.getId() + "§a 升级至 §6" + nextLevel.getLevelName());
             // note that's there's been a levelup
             levelUp = true;
             // Play the level up skills, animations, etc... (before updating currentLevel so oldLevel is available)
@@ -313,7 +313,7 @@ public class PetStats {
 
         // If there is no next level, set the experience so that it's the plateau value
         if (getNextLevel().equals(currentLevel) && experience > currentLevel.getExpThreshold()) {
-            Debugger.send("§7Pet " + pet.getId() + "is §cnot leveling up§7 as it has reached §cmaximum level§7, or that you §calready own the evolution§7.");
+            Debugger.send("§7宠物 " + pet.getId() + " §c无法升级§7：已达到 §c最高等级§7，或你 §c已拥有该进化形态§7。");
             experience = currentLevel.getExpThreshold();
         }
 
@@ -360,7 +360,7 @@ public class PetStats {
         try {
             return serializer.buildStats();
         } catch (RuntimeException ex) {
-            MCPets.getLog().warning("Skipping invalid pet stats entry: " + ex.getMessage());
+            MCPets.getLog().warning("已跳过无效的宠物统计数据：" + ex.getMessage());
             return null;
         }
     }

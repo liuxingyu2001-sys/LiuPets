@@ -6,6 +6,8 @@ import fr.nocsy.mcpets.data.Pet;
 import fr.nocsy.mcpets.data.PetSkin;
 import fr.nocsy.mcpets.data.config.AbstractConfig;
 import fr.nocsy.mcpets.data.config.CategoryConfig;
+import fr.nocsy.mcpets.data.config.FormatArg;
+import fr.nocsy.mcpets.data.config.Language;
 import fr.nocsy.mcpets.data.config.ItemsListConfig;
 import fr.nocsy.mcpets.data.config.PetConfig;
 import fr.nocsy.mcpets.data.config.PetFoodConfig;
@@ -70,7 +72,7 @@ public class EditorGlobalListener implements Listener {
                 return;
 
             if (editorItem.name().contains("_DELETE") && e.getClick() != ClickType.SHIFT_LEFT) {
-                p.sendMessage("§c§lWARNING:§7 Are you sure you want to delete it ? Click §cSHIFT + CLICK§7 if so.");
+                Language.EDITOR_DELETE_WARNING.sendMessage(p);
                 return;
             }
 
@@ -103,7 +105,7 @@ public class EditorGlobalListener implements Listener {
                 final int slot = e.getSlot();
                 final Pet pet = Pet.getObjectPets().get(slot + 45 * EditorPageSelection.get(p));
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final EditorEditing editing = EditorEditing.get(p);
@@ -116,14 +118,14 @@ public class EditorGlobalListener implements Listener {
             else if (editorItem.getType().equals(EditorExpectationType.PET_DELETE)) {
                 final Pet pet = PetConfig.loadConfigPet(EditorEditing.get(p).getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 changesMade = PetConfig.getConfig(pet.getId()).delete();
 
                 if (changesMade) {
                     EditorItems.getCachedDeleted().add(pet.getId());
-                    p.sendMessage("§cThe pet §e" + pet.getId() + "§c was deleted successfully.");
+                    Language.EDITOR_PET_DELETED.sendMessageFormatted(p, new FormatArg("%pet%", pet.getId()));
                 }
 
                 editor.setState(EditorState.PET_EDITOR);
@@ -135,7 +137,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editorPet = EditorEditing.get(p);
                 final Pet pet = PetConfig.loadConfigPet(editorPet.getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final PetLevel level = PetConfig.loadConfigPet(editorPet.getPetId()).getPetLevels().stream()
@@ -153,7 +155,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editorPet = EditorEditing.get(p);
                 final Pet pet = PetConfig.loadConfigPet(editorPet.getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final PetConfig config = PetConfig.getConfig(pet.getId());
@@ -170,7 +172,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editorPet = EditorEditing.get(p);
                 final Pet pet = PetConfig.loadConfigPet(editorPet.getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final PetLevel level = PetConfig.loadConfigPet(editorPet.getPetId()).getPetLevels().stream()
@@ -189,7 +191,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editorPet = EditorEditing.get(p);
                 final Pet pet = PetConfig.loadConfigPet(editorPet.getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final int slotMapping = e.getSlot();
@@ -207,7 +209,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editorPet = EditorEditing.get(p);
                 final Pet pet = PetConfig.loadConfigPet(editorPet.getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final PetConfig config = PetConfig.getConfig(pet.getId());
@@ -225,7 +227,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editorPet = EditorEditing.get(p);
                 final Pet pet = PetConfig.loadConfigPet(editorPet.getPetId());
                 if (pet == null) {
-                    Debugger.send("§cPet could not be found.");
+                    Debugger.send("§c找不到宠物。");
                     return;
                 }
                 final PetConfig config = PetConfig.getConfig(pet.getId());
@@ -262,7 +264,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editing = EditorEditing.get(p);
                 final Category category = CategoryConfig.loadConfigCategory(editing.getMappedId());
                 if (category == null) {
-                    Debugger.send("§cCategory could not be found.");
+                    Debugger.send("§c找不到分类。");
                     return;
                 }
                 final CategoryConfig config = CategoryConfig.getMapping().get(category.getId());
@@ -278,7 +280,7 @@ public class EditorGlobalListener implements Listener {
                 final EditorEditing editing = EditorEditing.get(p);
                 final Category category = CategoryConfig.loadConfigCategory(editing.getEditorMapping().get(e.getSlot()));
                 if (category == null) {
-                    Debugger.send("§cCategory could not be found.");
+                    Debugger.send("§c找不到分类。");
                     return;
                 }
                 editing.setMappedId(category.getId());
@@ -305,7 +307,7 @@ public class EditorGlobalListener implements Listener {
                 final String itemId = editing.getEditorMapping().get(e.getSlot());
                 final ItemStack item = ItemsListConfig.getInstance().getItemStack(itemId);
                 if (item == null) {
-                    Debugger.send("§cItem could not be found.");
+                    Debugger.send("§c找不到物品。");
                     return;
                 }
                 editing.setMappedId(itemId);
@@ -341,7 +343,7 @@ public class EditorGlobalListener implements Listener {
                 final String petFoodId = editing.getEditorMapping().get(e.getSlot());
                 final PetFood petFood = PetFoodConfig.loadConfigPetFood(petFoodId);
                 if (petFood == null) {
-                    Debugger.send("§cPetfood could not be found.");
+                    Debugger.send("§c找不到宠物食物。");
                     return;
                 }
                 editing.setMappedId(petFood.getId());
@@ -367,7 +369,7 @@ public class EditorGlobalListener implements Listener {
             }
 
             if (changesMade)
-                p.sendMessage("§aChanges saved! Make sure you §nreload MCPets§a to apply the changes.");
+                Language.EDITOR_SAVED.sendMessage(p);
 
         }
 
@@ -379,7 +381,7 @@ public class EditorGlobalListener implements Listener {
             editorItem.setValue(EditorItems.RESET_VALUE_TAG);
             if (editorItem.save(p)) {
                 editor.openEditor();
-                p.sendMessage("§aThe feature was reseted successfully! Please §nreload§a MCPets so the changes take effect!");
+                Language.EDITOR_RESET.sendMessage(p);
                 return true;
             }
         }

@@ -25,35 +25,35 @@ import fr.nocsy.mcpets.data.inventories.PetInventoryHolder;
 
 public enum EditorState {
 
-    DEFAULT("No title - Default"),
+    DEFAULT("未命名界面"),
 
     // First menu
-    GLOBAL_EDITOR("What do you want to edit?"),
+    GLOBAL_EDITOR("配置编辑器 · 选择项目"),
 
     // Second dive menu
-    CONFIG_EDITOR("Click a config option to edit"),
-    PET_EDITOR("Click a pet you want to edit"),
-    CATEGORY_EDITOR("Click a category you want to edit"),
-    ITEM_EDITOR("Click an item you want to edit"),
-    PETFOOD_EDITOR("Click a pet food you want to edit"),
+    CONFIG_EDITOR("编辑全局配置"),
+    PET_EDITOR("选择要编辑的宠物"),
+    CATEGORY_EDITOR("选择要编辑的分类"),
+    ITEM_EDITOR("选择要编辑的物品"),
+    PETFOOD_EDITOR("选择要编辑的宠物食物"),
 
     // Pet editor menu
-    PET_EDITOR_EDIT("Edit the pet"),
-    PET_EDITOR_LEVELS("Edit the living pet features"),
-    PET_EDITOR_SKINS("Edit the skins of the pet"),
+    PET_EDITOR_EDIT("编辑宠物"),
+    PET_EDITOR_LEVELS("编辑养成功能"),
+    PET_EDITOR_SKINS("编辑宠物外观"),
     // Levels editor menu
-    PET_EDITOR_LEVEL_EDIT("Edit the level features"),
+    PET_EDITOR_LEVEL_EDIT("编辑等级属性"),
     // Skins editor menu
-    PET_EDITOR_SKIN_EDIT("Edit the skin parameters"),
+    PET_EDITOR_SKIN_EDIT("编辑外观参数"),
 
     // Categories editor menu
-    CATEGORY_EDITOR_EDIT("Edit the category"),
+    CATEGORY_EDITOR_EDIT("编辑分类"),
 
     // Item editor menu
-    ITEM_EDITOR_EDIT("Edit the item"),
+    ITEM_EDITOR_EDIT("编辑物品"),
 
     // Petfood editor menu
-    PETFOOD_EDITOR_EDIT("Edit the pet food");
+    PETFOOD_EDITOR_EDIT("编辑宠物食物");
 
 
     private static final int INV_SIZE = 54;

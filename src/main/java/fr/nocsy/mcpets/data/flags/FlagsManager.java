@@ -19,7 +19,7 @@ public class FlagsManager {
         registered = true;
 
         if (instance == null) {
-            MCPets.getLog().warning("The main instance is null. The flags could not be registered...");
+            MCPets.getLog().warning("插件主实例为空，无法注册 WorldGuard 旗标。");
             return;
         }
 
@@ -44,14 +44,14 @@ public class FlagsManager {
      * Start the schedulers
      */
     public static void launchFlags() {
-        MCPets.getLog().info("-=- Launching Flags -=-");
+        MCPets.getLog().info("-=- 正在启动 WorldGuard 旗标 -=-");
         int count = 0;
         for (AbstractFlag flag : flags) {
             if (!(flag instanceof StoppableFlag stoppableFlag)) continue;
             stoppableFlag.launch();
             count++;
         }
-        MCPets.getLog().info(count + " flags launched.");
+        MCPets.getLog().info("已启动 " + count + " 个旗标。");
     }
 
     /**

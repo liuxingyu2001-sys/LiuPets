@@ -42,7 +42,7 @@ public class PetFoodBuff {
 
     public boolean apply() {
         if (pet.getPetStats() == null) {
-            Debugger.send("§cBuff could not be triggered on that pet as it has no statistics of a living pet.");
+            Debugger.send("§c无法对该宠物触发 Buff：它没有养成属性。");
             return false;
         }
 
@@ -61,13 +61,13 @@ public class PetFoodBuff {
         final List<PetFoodBuff> buffs = runningBuffs.computeIfAbsent(pet, k -> new ArrayList<>());
         buffs.add(this);
 
-        Debugger.send("§7Applying buff §a" + type.name() + "§7 on §6" + pet.getId() + "§7 for §a" + duration + "§7 ticks.");
-        Debugger.send("§7Buff information: " +
-                "  \nPet owner is §b" + pet.getOwner() +
-                "  \n§aType: §7" + type.name() +
-                "  \n§aPower: §7" + power +
-                "  \n§aOperator: §7" + operator.name() +
-                "  \n§aDuration: §7" + duration + "§7 ticks.");
+        Debugger.send("§7正在对 §6" + pet.getId() + "§7 施加 Buff §a" + type.name() + "§7，持续 §a" + duration + "§7 tick。");
+        Debugger.send("§7Buff 信息：" +
+                "  \n宠物主人：§b" + pet.getOwner() +
+                "  \n§a类型：§7" + type.name() +
+                "  \n§a强度：§7" + power +
+                "  \n§a运算方式：§7" + operator.name() +
+                "  \n§a持续时间：§7" + duration + "§7 tick。");
 
         PetFoodBuff instance = this;
 
@@ -80,7 +80,7 @@ public class PetFoodBuff {
 
         buffs.remove(this);
         if (buffs.isEmpty()) runningBuffs.remove(pet);
-        Debugger.send("§7Buff §a" + type.name() + "§7 applied to §6" + pet.getId() + "§7 has §cexpired§7 after §a" + duration + "§7 ticks.");
+        Debugger.send("§7Buff §a" + type.name() + "§7 已在 §6" + pet.getId() + "§7 上 §c过期§7，持续 §a" + duration + "§7 tick。");
     }
 
     public static List<PetFoodBuff> getBuffs(Pet pet) {

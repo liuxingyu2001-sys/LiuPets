@@ -203,21 +203,21 @@ public class PetLevel {
         String evId = petEvolution.getId();
         boolean canEvolve = canEvolve(player, petEvolution);
 
-        Debugger.send("Pet §6" + pet.getId() + "§7 is trying to evolve as §a" + evId);
-        Debugger.send("Checking conditions: §6can evolve ? §a" + canEvolve + " §7| §6forced ? §a" + forceEvolution);
+        Debugger.send("宠物 §6" + pet.getId() + "§7 正在尝试进化为 §a" + evId);
+        Debugger.send("检查条件：§6可进化？§a" + canEvolve + " §7| §6强制进化？§a" + forceEvolution);
 
         if (!canEvolve && !forceEvolution) {
             final Player p = Bukkit.getPlayer(player);
             if (p != null) {
                 Language.PET_COULD_NOT_EVOLVE.sendMessage(p);
-                Debugger.send("§a" + pet.getId() + "§6 can not evolve into §a" + evolutionId
-                        + "§6 because the §cplayer" + p.getName() + " already owns the evolution§6.");
+                Debugger.send("§a" + pet.getId() + "§6 无法进化为 §a" + evolutionId
+                        + "§6，因为玩家 §c" + p.getName() + " 已拥有该进化形态§6。");
                 return false;
             }
 
             if (evolutionId != null) {
-                MCPets.getLog().warning("The pet " + pet.getId() + " tried to evolve into "
-                        + evolutionId + " but this evolution doesn't exist in MCPets. Please provide the ID of a registered pet.");
+                MCPets.getLog().warning("宠物 " + pet.getId() + " 尝试进化为 "
+                        + evolutionId + "，但该进化目标不存在。请提供已注册宠物的 ID。");
                 return false;
             }
 
@@ -242,7 +242,7 @@ public class PetLevel {
             final PetInventory evolutionInventory = PetInventory.get(petEvolution);
             // If we can not define an inventory in the evolution, then we lose the content so it doesn't make sense
             if (evolutionInventory == null) {
-                MCPets.getLog().severe("Could not load inventory of pet " + evolutionId + " for player " + player + "\nCritical issue : could not evolve the pet.");
+                MCPets.getLog().severe("无法加载玩家 " + player + " 的宠物 " + evolutionId + " 的背包，进化失败。");
                 return false;
             }
             // Move the contents instead of sharing the same Inventory instance:

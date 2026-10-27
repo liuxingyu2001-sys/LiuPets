@@ -57,7 +57,7 @@ public class Databases {
 
     public static boolean init() {
         if (GlobalConfig.getInstance().isDisableMySQL()) {
-            MCPets.getInstance().getLogger().info("MySQL is disabled. Flat support will be used.");
+            MCPets.getInstance().getLogger().info("MySQL 已禁用，将使用 YAML 文件存储。");
             return false;
         }
         // /liupets reload re-runs init: never leak the previous pool
@@ -75,8 +75,8 @@ public class Databases {
                 GlobalConfig.getInstance().getMySQL_PORT(),
                 GlobalConfig.getInstance().getMySQL_DB()));
         if (!Databases.getMySQL().init()) {
-            MCPets.getInstance().getLogger().info("[Database] Can't initialize MySQL.");
-            MCPets.getInstance().getLogger().info("[Database] Will be using YAML support instead (no worry it's not a bug).");
+            MCPets.getInstance().getLogger().info("[数据库] 无法初始化 MySQL。");
+            MCPets.getInstance().getLogger().info("[数据库] 将改用 YAML 存储（这是正常回退，不是错误）。");
             GlobalConfig.getInstance().setDatabaseSupport(false);
             return false;
         }
@@ -124,7 +124,7 @@ public class Databases {
                 try {
                     uuid = UUID.fromString(uuidStr);
                 } catch (RuntimeException ex) {
-                    MCPets.getInstance().getLogger().warning("[Database] Skipping invalid uuid row: " + uuidStr);
+                    MCPets.getInstance().getLogger().warning("[数据库] 跳过无效的 UUID 数据：" + uuidStr);
                     continue;
                 }
 
@@ -198,7 +198,7 @@ public class Databases {
                 try {
                     uuid = UUID.fromString(uuidStr);
                 } catch (RuntimeException ex) {
-                    MCPets.getInstance().getLogger().warning("[Database] Skipping invalid uuid row: " + uuidStr);
+                    MCPets.getInstance().getLogger().warning("[数据库] 跳过无效的 UUID 数据：" + uuidStr);
                     continue;
                 }
 

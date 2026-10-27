@@ -5,7 +5,7 @@
 ## 项目速览
 
 - Bukkit/Paper 1.21 宠物与坐骑插件：MythicMobs 提供生物与技能，ModelEngine 或 BetterModel 渲染 3D 模型；可选 Nexo/ItemsAdder 自定义物品、WorldGuard 区域旗标、LuckPerms 权限、PlaceholderAPI 变量。
-- 本仓库是上游 MCPets 4.2.1 的中文分叉 **LiuPets**：插件名与产物为 `LiuPets`，数据目录 `plugins/LiuPets`，主命令 `/liupets`（别名 `pets`/`mcpets`/`lpets`），坐骑命令 `/mcmounts`（别名 `mounts`）。权限节点仍为 `mcpets.use`/`mcpets.admin`/`mcpets.color`，`plugin.yml` 里的 `liupets.*` 只是 children 别名。
+- 本仓库是基于上游 MCPets 4.2.x 的中文分叉 **LiuPets**：插件名与产物为 `LiuPets`，数据目录 `plugins/LiuPets`，主命令 `/liupets`（别名 `pets`/`mcpets`/`lpets`），坐骑命令 `/mcmounts`（别名 `mounts`）。权限节点仍为 `mcpets.use`/`mcpets.admin`/`mcpets.color`，`plugin.yml` 里的 `liupets.*` 只是 children 别名。
 - 分叉内容：中文默认文本（`Language` 枚举）、宠物中心 `PetHub`、`/liupets unlock`、`LiuIntegrations`（战令/技能联动）、`integrations.yml`、旧数据迁移、菜单分页重构。部分改动尚未提交：动手前先 `git status --short`，不要覆盖用户改动。
 - `mcpets-velocity/` 是独立的 Velocity 代理端插件，有自己的 pom，**不在根构建内**，负责跨服宠物同步。
 - 上游仓库：`git@github.com:Nocsy-Workshop/mcpets.git`（分支 `main`）。
@@ -15,8 +15,8 @@
 在仓库根目录执行：
 
 ```bash
-mvn clean package                              # 主插件 → target/LiuPets-4.2.1.jar
-mvn -f mcpets-velocity/pom.xml clean package   # 代理插件 → mcpets-velocity/target/MCPets-Velocity-4.1.8.jar
+mvn clean package                              # 主插件 → target/LiuPets-<version>.jar
+mvn -f mcpets-velocity/pom.xml clean package   # 代理插件 → mcpets-velocity/target/MCPets-Velocity-<version>.jar
 ```
 
 - 根 `pom.xml` 是单模块，没有 `<modules>`；代理端必须单独构建。
@@ -35,7 +35,7 @@ mvn -f mcpets-velocity/pom.xml clean package   # 代理插件 → mcpets-velocit
 | `commands/` | `CCommand`/`AArgument` 命令框架；`commands/mcpets/Argument*.java` 子命令；`commands/mounts/` 坐骑命令 |
 | `data/Pet.java` | 宠物运行时对象与全局池（`objectPets`、`activePets`），召唤/收回/跟随核心逻辑 |
 | `data/config/` | 配置模型：`AbstractConfig` 基类、`GlobalConfig`、`LanguageConfig`/`Language`、`PetConfig`、`CategoryConfig`、`PetFoodConfig`、`ItemsListConfig`、`BlacklistConfig` |
-| `data/editor/` | 游戏内 YAML 编辑器（`/liupets editor`）：`Editor`、`EditorState`、`EditorItems`、`EditorConversation` |
+| `data/editor/` | 游戏内 YAML 编辑器（`/liupets editor`）：`Editor`、`EditorState`、`EditorItems`、`EditorConversation`、`EditorText`（编辑器图标中文化层） |
 | `data/inventories/` | 全部 GUI 与 `PetInventoryHolder`（宠物中心、列表、交互、背包、皮肤、分类、坐骑） |
 | `data/livingpets/` | 等级/经验、生命与伤害修正、宠物食物与 Buff |
 | `data/sql/` | 持久化：`Databases`（MySQL，可回退 YAML）、`PlayerData`、`MySQLDB`、`PlayerDataNoDatabase` |
@@ -135,13 +135,15 @@ mvn -f mcpets-velocity/pom.xml clean package   # 代理插件 → mcpets-velocit
 ## 本地化与兼容
 
 - 插件身份统一 `LiuPets`/`liupets`；保留 `mcpets` 命令别名、`mcpets.*` 权限、插件消息 channel 与 `plugins/MCPets` 旧数据迁移，避免破坏已有服务器与商城/战令配置。
-- 玩家可见文本在 `Language` 枚举维护中文；`README.md` 顶部是中文分叉说明，下方是上游英文介绍与 Velocity 说明，功能改动时同步相应段落。
+- 玩家可见文本在 `Language` 枚举维护中文；`README.md` 与代理端文档均为中文，功能改动时同步更新相应段落。`/liupets editor` 的标题、图标名称/说明与输入提示也已中文化。
+- 编辑器（`/liupets editor`）的物品标题/描述不直接散落在 `Language` 中：`EditorItems.getItem()` 在返回前调用 `EditorText.localize(...)`，按原始英文标题映射中文标题、类型提示与当前值；未识别的动态宠物名/等级名保持原样，避免改写玩家配置。新增编辑器图标时必须同时在 `EditorText.NAMES` 补中文，否则会回退英文标题。
+- `EditorState` 的 GUI 标题同样是中文；编辑器输入提示、校验、保存/重置/删除反馈使用 `EDITOR_*` / `COMMAND_*` 系列 `Language` 键，老服 `language.yml` 会自动补齐缺失键。
 - 命令输出中的旧 `/mcpets` 写法应替换为 `/liupets`（见 `MCPetsCommand` 参数不完整提示）。
 
 ## 已知陷阱
 
-- `mcpets-velocity/README.md` 的安装步骤仍写 `plugins/MCPets/config.yml`（上游路径）；本分叉实际为 `plugins/LiuPets/`，更新文档时留意。
-- 老服 `language.yml` 已有旧文本时不会被覆盖；要获得新中文默认文本需删除文件后重载（README 已提示）。
+- `README.md` 与 `mcpets-velocity/README.md` 已全部中文化；修改安装路径或配置键时同步更新这两个文档，代理端路径应为 `plugins/LiuPets/config.yml`。
+- 老服 `language.yml` 的旧英文文本不会覆盖中文默认值：`Language.reload()` 会检测不含汉字的配置值并回退到内置中文；含中文的自定义文本仍保留。若需完全重置可删除文件后重载。
 - 根 pom `<properties>` 里 `maven.compiler.source`/`target` 写的 17 不生效（被编译插件的 21 覆盖），不要据此改依赖或语法级别。
 - 版本号同时出现在根 `pom.xml` 和 `mcpets-velocity/pom.xml`；`plugin.yml`/`velocity-plugin.json` 由资源过滤生成，无需手改。
 - `git status` 中可能已有用户未提交的分叉改动（新增 `PetHub`、`LiuIntegrations`、`LiuPetsAPI`、`integrations.yml` 等）；不要 `git checkout` 或覆盖无关文件。

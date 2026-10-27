@@ -49,9 +49,9 @@ public class LanguageConfig extends AbstractConfig {
         }
 
         if (Language.PET_INVENTORY_TITLE.getMessage().equals(Language.INVENTORY_PETS_MENU_INTERACTIONS.getMessage())) {
-            MCPets.getLog().severe("Interaction menu and prime menu have the same name, which might lead to unexpected behaviors. Please consider having different names for both menus.");
+            MCPets.getLog().severe("交互菜单与主菜单的名称相同，可能导致界面行为异常，请为两者设置不同名称。");
         }
 
-        MCPets.getLog().info("Language file reloaded.");
+        MCPets.getLog().info("语言文件已重新加载。");
     }
 }

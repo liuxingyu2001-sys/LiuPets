@@ -461,7 +461,7 @@ public class PetListener implements Listener {
         if (!GlobalConfig.getInstance().hasBlackListedWorld(e.getWhere().getWorld().getName())) return;
 
         e.setCancelled(true);
-        Debugger.send("§cSpawn of §6" + e.getPet().getId() + "§c cancelled: world §6" + e.getWhere().getWorld().getName() + "§c is blacklisted.");
+        Debugger.send("§c宠物 §6" + e.getPet().getId() + "§c召唤取消：世界 §6" + e.getWhere().getWorld().getName() + "§c 已被列入黑名单。");
 
         Player p = Bukkit.getPlayer(e.getPet().getOwner());
         if (p != null) {
@@ -484,7 +484,7 @@ public class PetListener implements Listener {
         // if it's not the owner or an admin mounting the pet, then we cancel it
         if (!e.getPet().getOwner().equals(e.getEntity().getUniqueId()) && !e.getEntity().hasPermission(PPermission.ADMIN.getPermission())) {
             e.setCancelled(true);
-            Debugger.send("§c" + e.getEntity().getName() + " can not mount " + e.getPet().getId() + " as he's not the owner, nor an admin.");
+            Debugger.send("§c" + e.getEntity().getName() + " 无法骑乘 " + e.getPet().getId() + "，因为既不是主人也不是管理员。");
         }
         // If user doesn't have the perm to mount the pet, cancel the event
         if (e.getPet().getMountPermission() != null && !e.getEntity().hasPermission(e.getPet().getMountPermission())) {
@@ -503,7 +503,7 @@ public class PetListener implements Listener {
                 FlagsManager.getFlag(DismountPetFlag.NAME).testState(player.getLocation())) {
 
             e.setCancelled(true);
-            Debugger.send("[EntityMountPetEvent] §c" + player.getName() + " can not mount model of " + pet.getId() + " as a region is preventing mounting.");
+            Debugger.send("[EntityMountPetEvent] §c" + player.getName() + " 无法骑乘 " + pet.getId() + " 的模型，因为当前区域禁止骑乘。");
             Language.NOT_MOUNTABLE_HERE.sendMessage(player);
             if (pet.isDespawnOnDismount()) pet.despawn(PetDespawnReason.FLAG);
         }

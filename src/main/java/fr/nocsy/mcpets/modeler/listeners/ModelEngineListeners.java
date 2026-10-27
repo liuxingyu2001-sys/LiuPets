@@ -70,7 +70,7 @@ public class ModelEngineListeners implements Listener {
                 !player.hasPermission(PPermission.ADMIN.getPermission())) {
 
             e.setCancelled(true);
-            Debugger.send("[ModelMountEvent] §c" + player.getName() + " can not mount model of " + pet.getId() + " as he's not the owner, nor an admin.");
+            Debugger.send("[ModelMountEvent] §c" + player.getName() + " 无法骑乘 " + pet.getId() + " 的模型：既不是主人也不是管理员。");
         }
 
         if (GlobalConfig.getInstance().isWorldGuardSupport() &&
@@ -78,7 +78,7 @@ public class ModelEngineListeners implements Listener {
                 FlagsManager.getFlag(DismountPetFlag.NAME).testState(player.getLocation())) {
 
             e.setCancelled(true);
-            Debugger.send("§c" + player.getName() + " can not mount model of " + pet.getId() + " as a region is preventing mounting.");
+            Debugger.send("§c" + player.getName() + " 无法骑乘 " + pet.getId() + " 的模型：当前区域禁止骑乘。");
             Language.NOT_MOUNTABLE_HERE.sendMessage(player);
             if (pet.isDespawnOnDismount()) pet.despawn(PetDespawnReason.FLAG);
             return;

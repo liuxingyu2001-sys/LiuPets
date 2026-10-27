@@ -46,7 +46,7 @@ public abstract class AbstractFlag {
             registry.register(flag);
             this.flag = flag; // only set our field if there was no error
 
-            Debugger.send(getFlagName() + " flag registered successfully !");
+            Debugger.send(getFlagName() + " 旗标注册成功！");
 
         } catch (final Exception e) {
             // some other plugin registered a flag by the same name already.
@@ -54,12 +54,12 @@ public abstract class AbstractFlag {
             final Flag<?> existing = registry.get(flagName);
             if (existing instanceof StateFlag) {
                 this.flag = (StateFlag) existing;
-                Debugger.send(getFlagName() + " flag reattached successfully (was already registered).");
+                Debugger.send(getFlagName() + " 旗标重新挂载成功（此前已注册）。");
             }
             else {
                 // types don't match - this is bad news! some other plugin conflicts with you
                 // hopefully this never actually happens
-                MCPets.getLog().warning(getFlagName() + " Flag couldn't be attached... Server restart will be necessary to fix the issue.");
+                MCPets.getLog().warning("旗标 " + getFlagName() + " 无法挂载，可能需要重启服务器才能修复。");
                 MCPets.getLog().log(Level.SEVERE, getFlagName() + " flag attachment failed", e);
             }
 

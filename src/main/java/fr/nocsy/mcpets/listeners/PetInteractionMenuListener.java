@@ -25,6 +25,7 @@ import fr.nocsy.mcpets.PPermission;
 import fr.nocsy.mcpets.utils.Utils;
 import fr.nocsy.mcpets.utils.PDCTag;
 import fr.nocsy.mcpets.data.PetSkin;
+import fr.nocsy.mcpets.data.config.GlobalConfig;
 import fr.nocsy.mcpets.data.config.Language;
 import fr.nocsy.mcpets.data.PetDespawnReason;
 import fr.nocsy.mcpets.data.config.FormatArg;
@@ -153,7 +154,7 @@ public class PetInteractionMenuListener implements Listener {
             if (!p.isOnline()) return;
             String name = input.trim().replace("'", "").replace(";", "");
             if (name.equalsIgnoreCase("cancel") || name.equals("取消")) {
-                p.sendMessage("§7已取消宠物改名。");
+                Language.CANCEL_RENAME.sendMessage(p);
                 return;
             }
             final String blackListedWord = Utils.isInBlackList(name);
@@ -166,8 +167,9 @@ public class PetInteractionMenuListener implements Listener {
                 Language.REVOKED_BEFORE_CHANGES.sendMessage(p);
                 return;
             }
-            if (name.isEmpty() || name.codePointCount(0, name.length()) > 32) {
-                Language.NICKNAME_NOT_CHANGED.sendMessage(p);
+            final int maxLength = Math.max(1, GlobalConfig.getInstance().getMaxNameLength());
+            if (name.isEmpty() || name.codePointCount(0, name.length()) > maxLength) {
+                Language.NICKNAME_NOT_CHANGED.sendMessageFormatted(p, new FormatArg("%max%", maxLength));
                 return;
             }
             pet.setDisplayName(name, true, !p.hasPermission(PPermission.COLOR.getPermission()));

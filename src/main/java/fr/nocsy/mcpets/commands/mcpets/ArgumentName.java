@@ -15,7 +15,7 @@ import fr.nocsy.mcpets.listeners.PetInteractionMenuListener;
 public class ArgumentName extends AArgument {
 
     public ArgumentName(CommandSender sender, String[] args) {
-        super("name", new int[]{1}, sender, args, "/mcpets name [name]");
+        super("name", new int[]{1}, sender, args, "/mcpets name [名字]");
     }
 
     @Override
@@ -57,8 +57,9 @@ public class ArgumentName extends AArgument {
 
         boolean stripColor = !p.hasPermission(PPermission.COLOR.getPermission());
 
-        if (name.isEmpty() || name.codePointCount(0, name.length()) > 32) {
-            Language.NICKNAME_NOT_CHANGED.sendMessage(p);
+        final int maxLength = Math.max(1, GlobalConfig.getInstance().getMaxNameLength());
+        if (name.isEmpty() || name.codePointCount(0, name.length()) > maxLength) {
+            Language.NICKNAME_NOT_CHANGED.sendMessageFormatted(p, new FormatArg("%max%", maxLength));
             return;
         }
 
